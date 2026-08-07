@@ -6,7 +6,7 @@ A desktop implementation of the classic Dots and Boxes game built with Python an
 
 - Player-versus-player mode
 - Player-versus-AI mode
-- Easy, medium, and hard AI difficulties
+- Difficulty-based AI using random, tactical, and heuristic move selection
 - Live score and turn display
 - Move hints
 - Undo support in player-versus-player games
@@ -44,6 +44,43 @@ python main.py
 
 Choose **VS PLAYER** for a local two-player game or **VS AI** and select a difficulty. Click an available line between adjacent dots to make a move. Completing a box adds it to the active player's score.
 
+## AI strategy
+
+The current AI changes its selection rule with the chosen difficulty. Each rule operates on the edges that are still available on the 5-by-5 box board.
+
+### Easy: random selection
+
+Easy builds a list of every unoccupied horizontal and vertical edge, then selects one at random. It does not inspect whether the move completes a box, creates a risk, or improves a later position.
+
+### Medium: immediate-box tactic
+
+Medium scans the boxes in row-and-column order. If a box already has three occupied sides, it selects the missing fourth edge and scores that box. When no box can be completed immediately, Medium falls back to the same random selection used by Easy.
+
+This is a one-step tactical rule. It prioritizes an available score, but it does not compare all legal moves, predict the opponent's reply, or avoid setting up a box for the opponent.
+
+### Hard: heuristic best-move evaluation
+
+Hard evaluates every available edge and selects the edge with the highest numerical score. For each candidate, the hint engine temporarily places the edge, evaluates the resulting board, and then removes the edge so the live game state is unchanged.
+
+The heuristic score uses these exact weights:
+
+```text
++100  if the candidate completes an unclaimed box
+ -50  if the resulting board contains an unclaimed three-sided box
+ +20  for each unclaimed box with exactly two occupied sides
+  +2  when the candidate touches zero occupied sides in adjacent boxes
+  +5  when the candidate touches one occupied side in adjacent boxes
+  +3  when the candidate touches two occupied sides in adjacent boxes
+```
+
+Completing a box receives the strongest single reward. A three-sided box is penalized because its remaining edge may become an easy score. Two-sided boxes and the number of occupied sides around the candidate are lower-weight positional factors used to rank otherwise similar moves.
+
+In this project, **best move** means the legal edge with the highest heuristic score for the board produced by that one move. If multiple edges have the same score, the first one encountered during the board scan is selected. This is not a guarantee of mathematically optimal play.
+
+### Minimax distinction
+
+Minimax would recursively simulate future AI and opponent moves, assume that both players choose their strongest continuation, and work backward from those outcomes. The current implementation does **not** perform that recursive search. Medium uses an immediate completion rule, while Hard uses a one-move heuristic evaluation without simulating an opponent response. Describing the current AI as minimax would therefore be inaccurate.
+
 During a game:
 
 - **HINT** highlights a suggested move.
@@ -70,9 +107,10 @@ The executable is generated at `dist/DotsAndBoxes.exe`. The `build/` and `dist/`
 
 ```text
 assets/             Images used by the interface
-core/               Game rules, hints, and AI logic
+core/               Game rules, heuristic hints, and AI logic
 ui/                 Screens and reusable interface components
 utils/              Shared constants
 DotsAndBoxes.spec   PyInstaller build configuration
 main.py             Application entry point
 ```
+
