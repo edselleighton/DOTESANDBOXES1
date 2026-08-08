@@ -16,13 +16,15 @@ class GameScreen(Frame):
         self.engine = None
         self.canvas.bind("<Button-1>", self._placeholder_click)
 
-        self.right = Frame(self, bg=BG_COLOR)
+        self.right = Frame(self, bg=BG_COLOR, width=300)
         self.right.pack(side="right", fill="y", padx=10, pady=10)
+        self.right.pack_propagate(False)
         self.right.configure(highlightbackground=BORDER_COLOR, highlightthickness=4)
 
         self.title = Label(self.right, text="Player vs Player",
-                           fg="white", bg=BG_COLOR, font=("Comic Sans MS", 26))
-        self.title.pack(pady=15)
+                           fg="white", bg=BG_COLOR, font=("Comic Sans MS", 22),
+                           wraplength=270, justify="center")
+        self.title.pack(fill="x", padx=10, pady=15)
 
         self.turn_label = Label(self.right, text="", fg="white",
                                 bg=BG_COLOR, font=("Comic Sans MS", 20))
@@ -105,11 +107,15 @@ class GameScreen(Frame):
         self.p2_score_label.config(text=f"P2: {p2}")
 
     def update_turn_label(self):
-        if self.engine and hasattr(self.engine, "display_turn_text"):
-            try:
-                self.engine.display_turn_text()
-            except:
-                pass
+        if not self.engine:
+            return
+
+        player = 1 if self.engine.player1_turn else 2
+        color = "#0492CF" if self.engine.player1_turn else "#EE4035"
+        self.turn_label.config(text=f"Next turn: Player {player}", fg=color)
+
+        self.canvas.delete("turn")
+        self.engine.turntext_handle = None
 
     def show_hint(self):
         if not self.engine:
@@ -185,3 +191,4 @@ class GameScreen(Frame):
             return
 
         self.update_turn_label()
+
