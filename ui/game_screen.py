@@ -36,7 +36,7 @@ class GameScreen(Frame):
         p1_panel.pack(pady=8)
         Label(p1_panel, image=self.img_player1, bg=BG_COLOR).pack(side="left", padx=8)
         self.p1_score_label = Label(p1_panel, text="0",
-                                    fg="white", bg=BG_COLOR, width=5,
+                                    fg="white", bg=BG_COLOR, width=3,
                                     font=("Comic Sans MS", 18),
                                     highlightbackground="#888888",
                                     highlightthickness=1, bd=0)
@@ -47,7 +47,7 @@ class GameScreen(Frame):
         self.p2_icon_label = Label(p2_panel, image=self.img_player2, bg=BG_COLOR)
         self.p2_icon_label.pack(side="left", padx=8)
         self.p2_score_label = Label(p2_panel, text="0",
-                                    fg="white", bg=BG_COLOR, width=5,
+                                    fg="white", bg=BG_COLOR, width=3,
                                     font=("Comic Sans MS", 18),
                                     highlightbackground="#888888",
                                     highlightthickness=1, bd=0)
