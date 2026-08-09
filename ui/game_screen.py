@@ -1,4 +1,6 @@
 from tkinter import Frame, Canvas, Label, Button
+from ui.components.back_button import BackButton
+from utils.assets import load_image
 from utils.constants import BG_COLOR, BORDER_COLOR
 import numpy as np
 
@@ -21,37 +23,51 @@ class GameScreen(Frame):
         self.right.pack_propagate(False)
         self.right.configure(highlightbackground=BORDER_COLOR, highlightthickness=4)
 
-        self.title = Label(self.right, text="Player vs Player",
-                           fg="white", bg=BG_COLOR, font=("Comic Sans MS", 22),
-                           wraplength=270, justify="center")
-        self.title.pack(fill="x", padx=10, pady=15)
-
-        self.turn_label = Label(self.right, text="", fg="white",
-                                bg=BG_COLOR, font=("Comic Sans MS", 20))
-        self.turn_label.pack(pady=15)
+        self.img_player1 = load_image("player_blue.png", (4, 4))
+        self.img_player2 = load_image("player_red.png", (3, 3))
+        self.img_ai = load_image("ai_icon.png", (4, 4))
+        self.img_hint = load_image("hint_button.png", (3, 3))
+        self.img_undo = load_image("undo_button.png", (3, 3))
 
         score_frame = Frame(self.right, bg=BG_COLOR)
-        score_frame.pack(pady=10)
+        score_frame.pack(pady=(45, 10))
 
-        self.p1_score_label = Label(score_frame, text="P1: 0",
-                                    fg="white", bg=BG_COLOR,
-                                    font=("Comic Sans MS", 20))
-        self.p1_score_label.pack(pady=5)
+        p1_panel = Frame(score_frame, bg=BG_COLOR)
+        p1_panel.pack(pady=8)
+        Label(p1_panel, image=self.img_player1, bg=BG_COLOR).pack(side="left", padx=8)
+        self.p1_score_label = Label(p1_panel, text="0",
+                                    fg="white", bg=BG_COLOR, width=5,
+                                    font=("Comic Sans MS", 18),
+                                    relief="solid", bd=1)
+        self.p1_score_label.pack(side="left", padx=8)
 
-        self.p2_score_label = Label(score_frame, text="P2: 0",
-                                    fg="white", bg=BG_COLOR,
-                                    font=("Comic Sans MS", 20))
-        self.p2_score_label.pack(pady=5)
+        p2_panel = Frame(score_frame, bg=BG_COLOR)
+        p2_panel.pack(pady=8)
+        self.p2_icon_label = Label(p2_panel, image=self.img_player2, bg=BG_COLOR)
+        self.p2_icon_label.pack(side="left", padx=8)
+        self.p2_score_label = Label(p2_panel, text="0",
+                                    fg="white", bg=BG_COLOR, width=5,
+                                    font=("Comic Sans MS", 18),
+                                    relief="solid", bd=1)
+        self.p2_score_label.pack(side="left", padx=8)
 
-        Button(self.right, text="HINT", font=("Comic Sans MS", 18), width=12,
-               command=self.show_hint).pack(pady=10)
+        actions = Frame(self.right, bg=BG_COLOR)
+        actions.pack(side="bottom", pady=35)
 
-        self.undo_button = Button(self.right, text="UNDO", font=("Comic Sans MS", 18), width=12,
-               command=self.undo_move)
-        self.undo_button.pack(pady=10)
+        Button(actions, image=self.img_hint, bg=BG_COLOR, activebackground=BG_COLOR,
+               bd=0, highlightthickness=0, cursor="hand2",
+               command=self.show_hint).pack(side="left", padx=12)
 
-        Button(self.right, text="BACK", font=("Comic Sans MS", 18), width=12,
-               command=lambda: manager.show_screen("ModeSelect")).pack(pady=40)
+        self.undo_button = Button(
+            actions, image=self.img_undo, bg=BG_COLOR, activebackground=BG_COLOR,
+            bd=0, highlightthickness=0, cursor="hand2", command=self.undo_move
+        )
+        self.undo_button.pack(side="left", padx=12)
+
+        BackButton(
+            self,
+            command=lambda: manager.show_screen("ModeSelect")
+        ).place(x=12, y=642)
 
         self.mode = None
         self.difficulty = None
@@ -84,10 +100,10 @@ class GameScreen(Frame):
                 print("[GameScreen] reset_game_state error:", e)
 
         if mode == "PVP" or mode is None:
-            self.title.config(text="Player vs Player")
+            self.p2_icon_label.config(image=self.img_player2)
             self.undo_button.config(state="normal")
         else:
-            self.title.config(text=f"AI Mode: {difficulty.upper() if difficulty else 'EASY'}")
+            self.p2_icon_label.config(image=self.img_ai)
             self.undo_button.config(state="disabled")
 
         self.update_turn_label()
@@ -103,19 +119,12 @@ class GameScreen(Frame):
         p1 = int(np.count_nonzero(self.engine.box_owner == 1))
         p2 = int(np.count_nonzero(self.engine.box_owner == 2))
 
-        self.p1_score_label.config(text=f"P1: {p1}")
-        self.p2_score_label.config(text=f"P2: {p2}")
+        self.p1_score_label.config(text=str(p1))
+        self.p2_score_label.config(text=str(p2))
 
     def update_turn_label(self):
-        if not self.engine:
-            return
-
-        player = 1 if self.engine.player1_turn else 2
-        color = "#0492CF" if self.engine.player1_turn else "#EE4035"
-        self.turn_label.config(text=f"Next turn: Player {player}", fg=color)
-
-        self.canvas.delete("turn")
-        self.engine.turntext_handle = None
+        if self.engine:
+            self.engine.display_turn_text()
 
     def show_hint(self):
         if not self.engine:
@@ -156,7 +165,8 @@ class GameScreen(Frame):
                 self.manager.show_screen("ResultScreen",
                                      result_text=winner,
                                      p1_score=p1,
-                                     p2_score=p2)
+                                     p2_score=p2,
+                                     mode=self.mode)
                 return
 
             if self.engine.player1_turn:
@@ -186,7 +196,8 @@ class GameScreen(Frame):
                 "ResultScreen",
                 result_text=winner,
                 p1_score=p1,
-                p2_score=p2
+                p2_score=p2,
+                mode=self.mode
             )
             return
 

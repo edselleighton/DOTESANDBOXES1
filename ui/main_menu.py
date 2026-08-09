@@ -1,4 +1,5 @@
-from tkinter import Frame, Label, Button
+from tkinter import Frame, Label
+from ui.components.rounded_button import RoundedButton
 from utils.constants import BG_COLOR, BORDER_COLOR
 
 class MainMenu(Frame):
@@ -19,18 +20,16 @@ class MainMenu(Frame):
             bg=BG_COLOR
         ).pack(pady=80)
 
-        Button(
+        RoundedButton(
             self,
             text="START",
-            font=("Comic Sans MS", 22),
             width=15,
             command=lambda: manager.show_screen("ModeSelect")
         ).pack(pady=15)
 
-        Button(
+        RoundedButton(
             self,
             text="EXIT",
-            font=("Comic Sans MS", 22),
             width=15,
             command=self.quit
         ).pack(pady=10)
@@ -40,3 +39,4 @@ class MainMenu(Frame):
 
     def unload(self):
         self.place_forget()
+

@@ -1,4 +1,7 @@
-from tkinter import Frame, Label, Button
+from tkinter import Frame
+
+from ui.components.back_button import BackButton
+from ui.components.rounded_button import RoundedButton
 from utils.constants import BG_COLOR, BORDER_COLOR
 
 
@@ -9,40 +12,33 @@ class ModeSelect(Frame):
                          highlightthickness=6)
         self.manager = manager
 
-        Label(
-            self,
-            text="SELECT MODE",
-            font=("Comic Sans MS", 40),
-            fg="white",
-            bg=BG_COLOR
-        ).pack(pady=80)
+        panel = Frame(self, bg=BG_COLOR, width=350, height=270,
+                      highlightbackground="#555555", highlightthickness=1)
+        panel.place(relx=0.5, rely=0.5, anchor="center")
+        panel.pack_propagate(False)
 
-        Button(
-            self,
-            text="VS AI",
-            font=("Comic Sans MS", 22),
+        RoundedButton(
+            panel,
+            text="VS. AI",
             width=15,
             command=lambda: manager.show_screen("DifficultySelect")
-        ).pack(pady=15)
+        ).pack(pady=(55, 15))
 
-        Button(
-            self,
-            text="VS PLAYER",
-            font=("Comic Sans MS", 22),
+        RoundedButton(
+            panel,
+            text="VS. PLAYER",
             width=15,
             command=lambda: manager.show_screen("GameScreen", mode="PVP")
         ).pack(pady=15)
 
-        Button(
+        BackButton(
             self,
-            text="BACK",
-            font=("Comic Sans MS", 18),
-            width=12,
             command=lambda: manager.show_screen("MainMenu")
-        ).pack(side="bottom", pady=50)
+        ).place(x=14, y=640)
 
     def load(self, **kwargs):
         self.place(relwidth=1, relheight=1)
 
     def unload(self):
         self.place_forget()
+

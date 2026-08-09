@@ -1,4 +1,7 @@
-from tkinter import Frame, Label, Button
+from tkinter import Frame
+
+from ui.components.back_button import BackButton
+from ui.components.rounded_button import RoundedButton
 from utils.constants import BG_COLOR, BORDER_COLOR
 
 
@@ -9,48 +12,29 @@ class DifficultySelect(Frame):
                          highlightthickness=6)
         self.manager = manager
 
-        Label(
-            self,
-            text="SELECT DIFFICULTY",
-            font=("Comic Sans MS", 38),
-            fg="white",
-            bg=BG_COLOR
-        ).pack(pady=60)
+        panel = Frame(self, bg=BG_COLOR, width=350, height=330,
+                      highlightbackground="#555555", highlightthickness=1)
+        panel.place(relx=0.5, rely=0.5, anchor="center")
+        panel.pack_propagate(False)
 
-        Button(
-            self,
-            text="EASY",
-            font=("Comic Sans MS", 22),
-            width=15,
-            command=lambda: manager.show_screen("GameScreen", mode="AI", difficulty="easy")
-        ).pack(pady=10)
+        for index, difficulty in enumerate(("EASY", "MEDIUM", "HARD")):
+            RoundedButton(
+                panel,
+                text=difficulty,
+                width=15,
+                command=lambda value=difficulty.lower(): manager.show_screen(
+                    "GameScreen", mode="AI", difficulty=value
+                )
+            ).pack(pady=(45 if index == 0 else 12, 12))
 
-        Button(
+        BackButton(
             self,
-            text="MEDIUM",
-            font=("Comic Sans MS", 22),
-            width=15,
-            command=lambda: manager.show_screen("GameScreen", mode="AI", difficulty="medium")
-        ).pack(pady=10)
-
-        Button(
-            self,
-            text="HARD",
-            font=("Comic Sans MS", 22),
-            width=15,
-            command=lambda: manager.show_screen("GameScreen", mode="AI", difficulty="hard")
-        ).pack(pady=10)
-
-        Button(
-            self,
-            text="BACK",
-            font=("Comic Sans MS", 18),
-            width=12,
             command=lambda: manager.show_screen("ModeSelect")
-        ).pack(side="bottom", pady=30)
+        ).place(x=14, y=640)
 
     def load(self, **kwargs):
         self.place(relwidth=1, relheight=1)
 
     def unload(self):
         self.place_forget()
+
