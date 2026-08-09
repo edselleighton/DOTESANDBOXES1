@@ -61,7 +61,7 @@ class ResultScreen(Frame):
 
     def load(self, result_text="", p1_score=0, p2_score=0, mode=None, **kwargs):
         self.place(relwidth=1, relheight=1)
-        self.btn_back.place(x=20, y=630)
+        self.btn_back.place(x=14, y=600)
 
         raw = str(result_text).upper()
 

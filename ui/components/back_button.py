@@ -12,7 +12,7 @@ class BackButton(Button):
 
         self.icon = None
         try:
-            self.icon = load_image("back_button.png", (5, 5))
+            self.icon = load_image("back_button.png", (3, 3))
             kwargs["image"] = self.icon
         except (OSError, TclError):
             kwargs.setdefault("text", "<")
@@ -20,4 +20,3 @@ class BackButton(Button):
             kwargs.setdefault("font", ("Arial", 18, "bold"))
 
         super().__init__(parent, command=command, **kwargs)
-

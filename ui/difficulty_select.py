@@ -28,7 +28,7 @@ class DifficultySelect(Frame):
         BackButton(
             self,
             command=lambda: manager.show_screen("ModeSelect")
-        ).place(x=14, y=640)
+        ).place(x=14, y=600)
 
     def load(self, **kwargs):
         self.place(relwidth=1, relheight=1)

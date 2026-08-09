@@ -13,13 +13,13 @@ class GameScreen(Frame):
         self.manager = manager
 
         self.canvas = Canvas(self, width=600, height=600, bg="white")
-        self.canvas.pack(side="left", padx=30, pady=30)
+        self.canvas.place(x=72, y=30)
 
         self.engine = None
         self.canvas.bind("<Button-1>", self._placeholder_click)
 
         self.right = Frame(self, bg=BG_COLOR, width=300)
-        self.right.pack(side="right", fill="y", padx=10, pady=10)
+        self.right.place(x=684, y=10, width=300, height=680)
         self.right.pack_propagate(False)
         self.right.configure(highlightbackground=BORDER_COLOR, highlightthickness=4)
 
@@ -69,7 +69,7 @@ class GameScreen(Frame):
         BackButton(
             self,
             command=lambda: manager.show_screen("ModeSelect")
-        ).place(x=12, y=642)
+        ).place(x=10, y=570)
 
         self.mode = None
         self.difficulty = None
