@@ -2,33 +2,46 @@ from tkinter import Frame
 
 from ui.components.back_button import BackButton
 from ui.components.rounded_button import RoundedButton, RoundedPanel
-from utils.constants import BG_COLOR, BORDER_COLOR
+from utils.constants import BG_COLOR, MENU_FRAME_COLOR
 
 
 class DifficultySelect(Frame):
     def __init__(self, parent, manager):
-        super().__init__(parent, bg=BG_COLOR,
-                         highlightbackground=BORDER_COLOR,
-                         highlightthickness=6)
+        super().__init__(parent, bg=MENU_FRAME_COLOR)
         self.manager = manager
 
-        panel = RoundedPanel(self, width=350, height=330, bg=BG_COLOR)
-        panel.place(relx=0.5, rely=0.5, anchor="center")
+        content = Frame(self, bg=BG_COLOR, width=974, height=621)
+        content.place(x=13, y=53)
 
-        for index, difficulty in enumerate(("EASY", "MEDIUM", "HARD")):
+        panel = RoundedPanel(
+            content,
+            width=449,
+            height=502,
+            radius=67,
+            bg=BG_COLOR,
+            outline="white",
+        )
+        panel.place(x=263, y=59)
+
+        button_positions = (("EASY", 33), ("MEDIUM", 192), ("HARD", 350))
+        for difficulty, y_position in button_positions:
             RoundedButton(
                 panel,
                 text=difficulty,
-                width=15,
+                width=263,
+                height=92,
+                radius=13,
+                font=("Comic Sans MS", 39),
+                outline="white",
                 command=lambda value=difficulty.lower(): manager.show_screen(
                     "GameScreen", mode="AI", difficulty=value
                 )
-            ).place(relx=0.5, y=76 + index * 90, anchor="center")
+            ).place(relx=0.5, y=y_position, anchor="n")
 
         BackButton(
-            self,
+            content,
             command=lambda: manager.show_screen("ModeSelect")
-        ).place(x=14, y=600)
+        ).place(x=13, y=555)
 
     def load(self, **kwargs):
         self.place(relwidth=1, relheight=1)
