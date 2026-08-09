@@ -38,7 +38,8 @@ class GameScreen(Frame):
         self.p1_score_label = Label(p1_panel, text="0",
                                     fg="white", bg=BG_COLOR, width=5,
                                     font=("Comic Sans MS", 18),
-                                    relief="solid", bd=1)
+                                    highlightbackground="#888888",
+                                    highlightthickness=1, bd=0)
         self.p1_score_label.pack(side="left", padx=8)
 
         p2_panel = Frame(score_frame, bg=BG_COLOR)
@@ -48,7 +49,8 @@ class GameScreen(Frame):
         self.p2_score_label = Label(p2_panel, text="0",
                                     fg="white", bg=BG_COLOR, width=5,
                                     font=("Comic Sans MS", 18),
-                                    relief="solid", bd=1)
+                                    highlightbackground="#888888",
+                                    highlightthickness=1, bd=0)
         self.p2_score_label.pack(side="left", padx=8)
 
         actions = Frame(self.right, bg=BG_COLOR)
@@ -71,6 +73,7 @@ class GameScreen(Frame):
 
         self.mode = None
         self.difficulty = None
+        self.undo_enabled = False
 
     def _placeholder_click(self, event):
         return "no-engine"
@@ -101,10 +104,12 @@ class GameScreen(Frame):
 
         if mode == "PVP" or mode is None:
             self.p2_icon_label.config(image=self.img_player2)
-            self.undo_button.config(state="normal")
+            self.undo_enabled = True
+            self.undo_button.config(cursor="hand2")
         else:
             self.p2_icon_label.config(image=self.img_ai)
-            self.undo_button.config(state="disabled")
+            self.undo_enabled = False
+            self.undo_button.config(cursor="arrow")
 
         self.update_turn_label()
         self.update_score_display()
@@ -138,7 +143,7 @@ class GameScreen(Frame):
         self.engine.highlight_edge(edge_type, pos)
     
     def undo_move(self):
-        if not self.engine:
+        if not self.engine or not self.undo_enabled:
             return
         
         result = self.engine.undo_move()
@@ -202,4 +207,3 @@ class GameScreen(Frame):
             return
 
         self.update_turn_label()
-

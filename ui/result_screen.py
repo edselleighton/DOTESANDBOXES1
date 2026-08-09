@@ -33,7 +33,9 @@ class ResultScreen(Frame):
         p1_panel.pack(side="left", padx=30)
         Label(p1_panel, image=self.img_p1, bg=BG_COLOR).pack(side="left", padx=5)
         self.lbl_p1_score = Label(p1_panel, text="", font=("Arial", 20, "bold"),
-                                  fg="white", bg="#2B2A2A", width=5)
+                                  fg="white", bg="#111111", width=5,
+                                  highlightbackground="#888888",
+                                  highlightthickness=1)
         self.lbl_p1_score.pack(side="left")
 
         p2_panel = Frame(score_frame, bg=BG_COLOR)
@@ -41,7 +43,9 @@ class ResultScreen(Frame):
         self.p2_icon_label = Label(p2_panel, image=self.img_p2, bg=BG_COLOR)
         self.p2_icon_label.pack(side="left", padx=5)
         self.lbl_p2_score = Label(p2_panel, text="", font=("Arial", 20, "bold"),
-                                  fg="white", bg="#2B2A2A", width=5)
+                                  fg="white", bg="#111111", width=5,
+                                  highlightbackground="#888888",
+                                  highlightthickness=1)
         self.lbl_p2_score.pack(side="left")
 
         self.btn_play_again = RoundedButton(
@@ -85,4 +89,3 @@ class ResultScreen(Frame):
         self.place_forget()
         try: self.btn_back.place_forget()
         except: pass
-

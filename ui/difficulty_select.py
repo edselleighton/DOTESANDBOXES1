@@ -1,7 +1,7 @@
 from tkinter import Frame
 
 from ui.components.back_button import BackButton
-from ui.components.rounded_button import RoundedButton
+from ui.components.rounded_button import RoundedButton, RoundedPanel
 from utils.constants import BG_COLOR, BORDER_COLOR
 
 
@@ -12,10 +12,8 @@ class DifficultySelect(Frame):
                          highlightthickness=6)
         self.manager = manager
 
-        panel = Frame(self, bg=BG_COLOR, width=350, height=330,
-                      highlightbackground="#555555", highlightthickness=1)
+        panel = RoundedPanel(self, width=350, height=330, bg=BG_COLOR)
         panel.place(relx=0.5, rely=0.5, anchor="center")
-        panel.pack_propagate(False)
 
         for index, difficulty in enumerate(("EASY", "MEDIUM", "HARD")):
             RoundedButton(
@@ -25,7 +23,7 @@ class DifficultySelect(Frame):
                 command=lambda value=difficulty.lower(): manager.show_screen(
                     "GameScreen", mode="AI", difficulty=value
                 )
-            ).pack(pady=(45 if index == 0 else 12, 12))
+            ).place(relx=0.5, y=76 + index * 90, anchor="center")
 
         BackButton(
             self,
@@ -37,4 +35,3 @@ class DifficultySelect(Frame):
 
     def unload(self):
         self.place_forget()
-

@@ -15,7 +15,7 @@ class MainMenu(Frame):
         Label(
             self,
             text="DOTS AND BOXES",
-            font=("Comic Sans MS", 44, "bold"),
+            font=("Comic Sans MS", 40, "bold"),
             fg="white",
             bg=BG_COLOR
         ).pack(pady=80)
@@ -39,4 +39,3 @@ class MainMenu(Frame):
 
     def unload(self):
         self.place_forget()
-
