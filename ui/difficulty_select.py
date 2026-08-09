@@ -1,53 +1,47 @@
-from tkinter import Frame, Label, Button
-from utils.constants import BG_COLOR, BORDER_COLOR
+from tkinter import Frame
+
+from ui.components.back_button import BackButton
+from ui.components.rounded_button import RoundedButton, RoundedPanel
+from utils.constants import BG_COLOR, MENU_FRAME_COLOR
 
 
 class DifficultySelect(Frame):
     def __init__(self, parent, manager):
-        super().__init__(parent, bg=BG_COLOR,
-                         highlightbackground=BORDER_COLOR,
-                         highlightthickness=6)
+        super().__init__(parent, bg=MENU_FRAME_COLOR)
         self.manager = manager
 
-        Label(
-            self,
-            text="SELECT DIFFICULTY",
-            font=("Comic Sans MS", 38),
-            fg="white",
-            bg=BG_COLOR
-        ).pack(pady=60)
+        content = Frame(self, bg=BG_COLOR, width=974, height=621)
+        content.place(x=13, y=53)
 
-        Button(
-            self,
-            text="EASY",
-            font=("Comic Sans MS", 22),
-            width=15,
-            command=lambda: manager.show_screen("GameScreen", mode="AI", difficulty="easy")
-        ).pack(pady=10)
+        panel = RoundedPanel(
+            content,
+            width=449,
+            height=502,
+            radius=67,
+            bg=BG_COLOR,
+            outline="white",
+        )
+        panel.place(x=263, y=59)
 
-        Button(
-            self,
-            text="MEDIUM",
-            font=("Comic Sans MS", 22),
-            width=15,
-            command=lambda: manager.show_screen("GameScreen", mode="AI", difficulty="medium")
-        ).pack(pady=10)
+        button_positions = (("EASY", 33), ("MEDIUM", 192), ("HARD", 350))
+        for difficulty, y_position in button_positions:
+            RoundedButton(
+                panel,
+                text=difficulty,
+                width=263,
+                height=92,
+                radius=13,
+                font=("Comic Sans MS", 39),
+                outline="white",
+                command=lambda value=difficulty.lower(): manager.show_screen(
+                    "GameScreen", mode="AI", difficulty=value
+                )
+            ).place(relx=0.5, y=y_position, anchor="n")
 
-        Button(
-            self,
-            text="HARD",
-            font=("Comic Sans MS", 22),
-            width=15,
-            command=lambda: manager.show_screen("GameScreen", mode="AI", difficulty="hard")
-        ).pack(pady=10)
-
-        Button(
-            self,
-            text="BACK",
-            font=("Comic Sans MS", 18),
-            width=12,
+        BackButton(
+            content,
             command=lambda: manager.show_screen("ModeSelect")
-        ).pack(side="bottom", pady=30)
+        ).place(x=13, y=555)
 
     def load(self, **kwargs):
         self.place(relwidth=1, relheight=1)

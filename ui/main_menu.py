@@ -1,39 +1,44 @@
-from tkinter import Frame, Label, Button
-from utils.constants import BG_COLOR, BORDER_COLOR
+from tkinter import Frame, Label
+from ui.components.rounded_button import RoundedButton
+from utils.constants import BG_COLOR, MENU_FRAME_COLOR
 
 class MainMenu(Frame):
     def __init__(self, parent, manager):
-        super().__init__(
-            parent,
-            bg=BG_COLOR,
-            highlightbackground=BORDER_COLOR,
-            highlightthickness=6
-        )
+        super().__init__(parent, bg=MENU_FRAME_COLOR)
         self.manager = manager
 
+        content = Frame(self, bg=BG_COLOR, width=974, height=621)
+        content.place(x=13, y=40)
+
         Label(
-            self,
+            content,
             text="DOTS AND BOXES",
-            font=("Comic Sans MS", 44, "bold"),
+            font=("Comic Sans MS", 74, "bold"),
             fg="white",
             bg=BG_COLOR
-        ).pack(pady=80)
+        ).place(relx=0.5, y=79, anchor="n")
 
-        Button(
-            self,
+        RoundedButton(
+            content,
             text="START",
-            font=("Comic Sans MS", 22),
-            width=15,
+            width=199,
+            height=92,
+            radius=13,
+            font=("Comic Sans MS", 39),
+            outline="white",
             command=lambda: manager.show_screen("ModeSelect")
-        ).pack(pady=15)
+        ).place(relx=0.5, y=303, anchor="n")
 
-        Button(
-            self,
+        RoundedButton(
+            content,
             text="EXIT",
-            font=("Comic Sans MS", 22),
-            width=15,
+            width=199,
+            height=92,
+            radius=13,
+            font=("Comic Sans MS", 39),
+            outline="white",
             command=self.quit
-        ).pack(pady=10)
+        ).place(relx=0.5, y=422, anchor="n")
 
     def load(self, **kwargs):
         self.place(relwidth=1, relheight=1)
