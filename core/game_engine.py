@@ -1,9 +1,10 @@
 from tkinter import *
 from core.hint_engine import HintEngine
 from core.ai_engine import AIEngine
+from utils.constants import BOARD_SIZE
 import numpy as np
 
-size_of_board = 600
+size_of_board = BOARD_SIZE
 number_of_dots = 6
 
 dot_color = '#7BC043'
@@ -28,17 +29,14 @@ class GameEngine:
         self.box_owner = np.zeros((number_of_dots - 1, number_of_dots - 1))
 
         self.player1_turn = True
-        self.turntext_handle = None
 
         self.move_history = []
 
         self.refresh_board()
-        self.display_turn_text()
 
     def reset_game_state(self):
         self.canvas.delete("edge")
         self.canvas.delete("box")
-        self.canvas.delete("turn")
         self.canvas.delete("hint")
 
         self.row_status.fill(0)
@@ -49,7 +47,6 @@ class GameEngine:
         self.player1_turn = True
 
         self.refresh_board()
-        self.display_turn_text()
 
     def convert_grid_to_logical_position(self, grid_pos):
         gp = np.array(grid_pos)
@@ -148,18 +145,6 @@ class GameEngine:
 
         return completed
 
-    def display_turn_text(self):
-        if self.turntext_handle:
-            self.canvas.delete(self.turntext_handle)
-
-        text = f"Next turn: Player {'1' if self.player1_turn else '2'}"
-        color = player1_color if self.player1_turn else player2_color
-
-        self.turntext_handle = self.canvas.create_text(
-            size_of_board - 120, size_of_board - 20,
-            text=text, fill=color, font="cmr 15 bold", tags="turn"
-        )
-
     def is_gameover(self):
         return np.all(self.box_owner != 0)
 
@@ -188,7 +173,6 @@ class GameEngine:
         self.refresh_board()
         self.redraw_all_edges()
         self.redraw_all_boxes()
-        self.display_turn_text()
         
         return True
     
@@ -274,8 +258,6 @@ class GameEngine:
         if not scored:
             self.player1_turn = not self.player1_turn
 
-        self.display_turn_text()
-
         return self.is_gameover()
 
     def click(self, event):
@@ -311,8 +293,6 @@ class GameEngine:
             self.player1_turn = not self.player1_turn
         
         self.move_history.append((t, (r, c), was_player1_turn, boxes_completed))
-
-        self.display_turn_text()
 
         if self.is_gameover():
             p1 = int(np.count_nonzero(self.box_owner == 1))
