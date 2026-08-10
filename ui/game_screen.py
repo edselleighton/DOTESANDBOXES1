@@ -1,75 +1,84 @@
 from tkinter import Frame, Canvas, Label, Button
 from ui.components.back_button import BackButton
 from utils.assets import load_image
-from utils.constants import BG_COLOR, BORDER_COLOR
+from utils.constants import BG_COLOR, BOARD_SIZE, MENU_FRAME_COLOR, SIDE_PANEL_COLOR
 import numpy as np
 
 class GameScreen(Frame):
     def __init__(self, parent, manager):
-        super().__init__(parent, bg=BG_COLOR,
-                         highlightbackground=BORDER_COLOR,
-                         highlightthickness=6)
+        super().__init__(parent, bg=MENU_FRAME_COLOR)
 
         self.manager = manager
 
-        self.canvas = Canvas(self, width=600, height=600, bg="white")
-        self.canvas.place(x=72, y=30)
+        self.content = Frame(self, bg=BG_COLOR, width=984, height=632)
+        self.content.place(x=6, y=32)
+        self.content.pack_propagate(False)
+
+        self.canvas = Canvas(
+            self.content,
+            width=BOARD_SIZE,
+            height=BOARD_SIZE,
+            bg="white",
+            bd=0,
+            highlightthickness=0,
+        )
+        self.canvas.place(x=95, y=37)
 
         self.engine = None
         self.canvas.bind("<Button-1>", self._placeholder_click)
 
-        self.right = Frame(self, bg=BG_COLOR, width=300)
-        self.right.place(x=684, y=10, width=300, height=680)
+        self.right = Frame(self.content, bg=SIDE_PANEL_COLOR, width=260)
+        self.right.place(x=694, y=23, width=260, height=584)
         self.right.pack_propagate(False)
-        self.right.configure(highlightbackground=BORDER_COLOR, highlightthickness=4)
+        self.right.configure(highlightbackground="#DDDDDD", highlightthickness=1)
 
-        self.img_player1 = load_image("player_blue.png", (4, 4))
-        self.img_player2 = load_image("player_red.png", (3, 3))
-        self.img_ai = load_image("ai_icon.png", (4, 4))
+        self.img_player1 = load_image("player_blue.png", (3, 3))
+        self.img_player2 = load_image("player_red.png").zoom(3, 3).subsample(7, 7)
+        self.img_ai = load_image("ai_icon.png").zoom(2, 2).subsample(7, 7)
         self.img_hint = load_image("hint_button.png", (3, 3))
         self.img_undo = load_image("undo_button.png", (3, 3))
 
-        score_frame = Frame(self.right, bg=BG_COLOR)
-        score_frame.pack(pady=(45, 10))
+        score_frame = Frame(self.right, bg=SIDE_PANEL_COLOR)
+        score_frame.pack(pady=(4, 10))
 
-        p1_panel = Frame(score_frame, bg=BG_COLOR)
+        p1_panel = Frame(score_frame, bg=SIDE_PANEL_COLOR)
         p1_panel.pack(pady=8)
-        Label(p1_panel, image=self.img_player1, bg=BG_COLOR).pack(side="left", padx=8)
+        Label(p1_panel, image=self.img_player1, bg=SIDE_PANEL_COLOR).pack(side="left", padx=8)
         self.p1_score_label = Label(p1_panel, text="0",
-                                    fg="white", bg=BG_COLOR, width=3,
+                                    fg="white", bg=SIDE_PANEL_COLOR, width=3,
                                     font=("Comic Sans MS", 18),
                                     highlightbackground="#888888",
                                     highlightthickness=1, bd=0)
         self.p1_score_label.pack(side="left", padx=8)
 
-        p2_panel = Frame(score_frame, bg=BG_COLOR)
+        p2_panel = Frame(score_frame, bg=SIDE_PANEL_COLOR)
         p2_panel.pack(pady=8)
-        self.p2_icon_label = Label(p2_panel, image=self.img_player2, bg=BG_COLOR)
+        self.p2_icon_label = Label(p2_panel, image=self.img_player2, bg=SIDE_PANEL_COLOR)
         self.p2_icon_label.pack(side="left", padx=8)
         self.p2_score_label = Label(p2_panel, text="0",
-                                    fg="white", bg=BG_COLOR, width=3,
+                                    fg="white", bg=SIDE_PANEL_COLOR, width=3,
                                     font=("Comic Sans MS", 18),
                                     highlightbackground="#888888",
                                     highlightthickness=1, bd=0)
         self.p2_score_label.pack(side="left", padx=8)
 
-        actions = Frame(self.right, bg=BG_COLOR)
-        actions.pack(side="bottom", pady=35)
+        actions = Frame(self.right, bg=SIDE_PANEL_COLOR)
+        actions.pack(side="bottom", pady=5)
 
-        Button(actions, image=self.img_hint, bg=BG_COLOR, activebackground=BG_COLOR,
+        Button(actions, image=self.img_hint, bg=SIDE_PANEL_COLOR, activebackground=SIDE_PANEL_COLOR,
                bd=0, highlightthickness=0, cursor="hand2",
                command=self.show_hint).pack(side="left", padx=12)
 
         self.undo_button = Button(
-            actions, image=self.img_undo, bg=BG_COLOR, activebackground=BG_COLOR,
+            actions, image=self.img_undo, bg=SIDE_PANEL_COLOR, activebackground=SIDE_PANEL_COLOR,
             bd=0, highlightthickness=0, cursor="hand2", command=self.undo_move
         )
         self.undo_button.pack(side="left", padx=12)
 
         BackButton(
-            self,
+            self.content,
             command=lambda: manager.show_screen("ModeSelect")
-        ).place(x=10, y=570)
+        ).place(x=18, y=544)
 
         self.mode = None
         self.difficulty = None
@@ -111,7 +120,6 @@ class GameScreen(Frame):
             self.undo_enabled = False
             self.undo_button.config(cursor="arrow")
 
-        self.update_turn_label()
         self.update_score_display()
 
     def unload(self):
@@ -126,10 +134,6 @@ class GameScreen(Frame):
 
         self.p1_score_label.config(text=str(p1))
         self.p2_score_label.config(text=str(p2))
-
-    def update_turn_label(self):
-        if self.engine:
-            self.engine.display_turn_text()
 
     def show_hint(self):
         if not self.engine:
@@ -149,7 +153,6 @@ class GameScreen(Frame):
         result = self.engine.undo_move()
         if result:
             self.update_score_display()
-            self.update_turn_label()
 
     def run_ai_turn(self):
         if not self.engine:
@@ -159,7 +162,6 @@ class GameScreen(Frame):
             gameover = self.engine.ai_move(self.difficulty)
 
             self.update_score_display()
-            self.update_turn_label()
             if gameover:
                 p1 = int(np.count_nonzero(self.engine.box_owner == 1))
                 p2 = int(np.count_nonzero(self.engine.box_owner == 2))
@@ -205,5 +207,3 @@ class GameScreen(Frame):
                 mode=self.mode
             )
             return
-
-        self.update_turn_label()
