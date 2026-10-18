@@ -2,7 +2,9 @@ from tkinter import Frame, Canvas, Label, Button
 from ui.components.back_button import BackButton
 from utils.assets import load_image
 from utils.constants import BG_COLOR, BOARD_SIZE, MENU_FRAME_COLOR, SIDE_PANEL_COLOR
-import numpy as np
+from core.game_engine import GameEngine, MatchConfig
+from core.match_controller import MatchController
+from ui.tk_board import TkBoardRenderer
 
 class GameScreen(Frame):
     def __init__(self, parent, manager):
@@ -24,8 +26,9 @@ class GameScreen(Frame):
         )
         self.canvas.place(x=95, y=37)
 
-        self.engine = None
-        self.canvas.bind("<Button-1>", self._placeholder_click)
+        self.engine = GameEngine()
+        self.renderer = TkBoardRenderer(self.canvas, self.engine, BOARD_SIZE)
+        self.canvas.bind("<Button-1>", self.on_click)
 
         self.right = Frame(self.content, bg=SIDE_PANEL_COLOR, width=260)
         self.right.place(x=694, y=23, width=260, height=584)
@@ -65,9 +68,10 @@ class GameScreen(Frame):
         actions = Frame(self.right, bg=SIDE_PANEL_COLOR)
         actions.pack(side="bottom", pady=5)
 
-        Button(actions, image=self.img_hint, bg=SIDE_PANEL_COLOR, activebackground=SIDE_PANEL_COLOR,
+        self.hint_button = Button(actions, image=self.img_hint, bg=SIDE_PANEL_COLOR, activebackground=SIDE_PANEL_COLOR,
                bd=0, highlightthickness=0, cursor="hand2",
-               command=self.show_hint).pack(side="left", padx=12)
+               command=self.show_hint)
+        self.hint_button.pack(side="left", padx=12)
 
         self.undo_button = Button(
             actions, image=self.img_undo, bg=SIDE_PANEL_COLOR, activebackground=SIDE_PANEL_COLOR,
@@ -82,128 +86,56 @@ class GameScreen(Frame):
 
         self.mode = None
         self.difficulty = None
-        self.undo_enabled = False
-
-    def _placeholder_click(self, event):
-        return "no-engine"
+        self.controller = MatchController(
+            self.engine, self.after, self.after_cancel,
+            self.on_move, self.on_finished,
+        )
 
     def load(self, mode=None, difficulty=None, **kwargs):
-        if self.engine is None:
-            try:
-                from core.game_engine import GameEngine
-                self.engine = GameEngine(self.canvas)
-            except Exception as e:
-                print("[GameScreen] Error creating GameEngine:", e)
-                self.engine = None
-
-        if self.engine:
-            self.canvas.unbind("<Button-1>")
-            self.canvas.bind("<Button-1>", self.on_click)
-
-        self.mode = mode
+        self.mode = mode or "PVP"
         self.difficulty = difficulty
-
+        self.p2_icon_label.config(
+            image=self.img_ai if self.mode == "AI" else self.img_player2
+        )
         self.place(relwidth=1, relheight=1)
-
-        if self.engine and hasattr(self.engine, "reset_game_state"):
-            try:
-                self.engine.reset_game_state()
-            except Exception as e:
-                print("[GameScreen] reset_game_state error:", e)
-
-        if mode == "PVP" or mode is None:
-            self.p2_icon_label.config(image=self.img_player2)
-            self.undo_enabled = True
-            self.undo_button.config(cursor="hand2")
-        else:
-            self.p2_icon_label.config(image=self.img_ai)
-            self.undo_enabled = False
-            self.undo_button.config(cursor="arrow")
-
-        self.update_score_display()
+        self.controller.start(MatchConfig(mode=self.mode, difficulty=difficulty))
 
     def unload(self):
+        self.controller.stop()
         self.place_forget()
 
-    def update_score_display(self):
-        if not self.engine:
-            return
-
-        p1 = int(np.count_nonzero(self.engine.box_owner == 1))
-        p2 = int(np.count_nonzero(self.engine.box_owner == 2))
-
+    def on_move(self, outcome):
+        self.renderer.render()
+        p1, p2 = self.engine.scores
         self.p1_score_label.config(text=str(p1))
         self.p2_score_label.config(text=str(p2))
+        self.undo_button.config(
+            state="normal" if self.controller.can_undo else "disabled",
+            cursor="hand2" if self.controller.can_undo else "arrow",
+        )
+        self.hint_button.config(
+            state="normal" if self.controller.accepts_human_move else "disabled"
+        )
+
+    def on_finished(self, outcome):
+        p1, p2 = outcome.scores
+        winner = "Winner: Player 1" if p1 > p2 else (
+            "Winner: Player 2" if p2 > p1 else "It's a tie"
+        )
+        self.manager.show_screen(
+            "ResultScreen", result_text=winner,
+            p1_score=p1, p2_score=p2, mode=self.mode,
+        )
 
     def show_hint(self):
-        if not self.engine:
-            return
+        move = self.controller.get_hint()
+        if move is not None:
+            self.renderer.highlight(move)
 
-        move = self.engine.get_hint()
-        if move is None:
-            return
-
-        edge_type, pos = move
-        self.engine.highlight_edge(edge_type, pos)
-    
     def undo_move(self):
-        if not self.engine or not self.undo_enabled:
-            return
-        
-        result = self.engine.undo_move()
-        if result:
-            self.update_score_display()
-
-    def run_ai_turn(self):
-        if not self.engine:
-            return
-
-        while self.mode == "AI" and not self.engine.player1_turn:
-            gameover = self.engine.ai_move(self.difficulty)
-
-            self.update_score_display()
-            if gameover:
-                p1 = int(np.count_nonzero(self.engine.box_owner == 1))
-                p2 = int(np.count_nonzero(self.engine.box_owner == 2))
-
-                winner = "Winner: Player 1" if p1 > p2 else (
-                        "Winner: Player 2" if p2 > p1 else "It's a tie")
-
-                self.manager.show_screen("ResultScreen",
-                                     result_text=winner,
-                                     p1_score=p1,
-                                     p2_score=p2,
-                                     mode=self.mode)
-                return
-
-            if self.engine.player1_turn:
-                break
+        return self.controller.undo_move()
 
     def on_click(self, event):
-        if not self.engine:
-            return
-
-        try:
-            result = self.engine.click(event)
-        except Exception as e:
-            print("[GameScreen] engine.click error:", e)
-            result = None
-
-        self.update_score_display()
-
-        if self.mode == "AI" and not self.engine.player1_turn:
-            self.after(300, self.run_ai_turn)
-
-        if isinstance(result, dict):
-            winner = result.get("result_text", "")
-            p1 = int(result.get("player1_score", 0))
-            p2 = int(result.get("player2_score", 0))
-
-            self.manager.show_screen(
-                "ResultScreen",
-                result_text=winner,
-                p1_score=p1,
-                p2_score=p2,
-                mode=self.mode
-            )
-            return
+        move = self.renderer.geometry.hit_test(event.x, event.y)
+        if move is not None:
+            self.controller.play_human(move)
