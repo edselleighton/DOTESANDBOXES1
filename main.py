@@ -1,4 +1,5 @@
-# main.py
+import argparse
+
 from tkinter import Tk
 from ui.main_menu import MainMenu
 from ui.mode_select import ModeSelect
@@ -63,11 +64,19 @@ class ScreenManager:
             except TypeError:
                 screen.load()
 
-def main():
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="Dots and Boxes desktop game")
+    parser.add_argument("--paper-club", action="store_true",
+                        help="Open the new Paper Club application shell")
+    args = parser.parse_args(argv)
+    if args.paper_club:
+        from ui.qt_app import run
+        return run()
     root = Tk()
     app = ScreenManager(root)
     root.mainloop()
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

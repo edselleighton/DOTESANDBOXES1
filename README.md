@@ -1,13 +1,15 @@
 # Dots and Boxes
 
-A desktop implementation of the classic Dots and Boxes game built with Python and Tkinter.
+A desktop implementation of the classic Dots and Boxes game built with Python.
+The current playable interface uses Tkinter. The Paper Club redesign is being
+introduced with a Qt application shell and a shared, independently testable rules model.
 
 ## Features
 
 - Player-versus-player mode
 - Player-versus-AI mode
 - Difficulty-based AI using random, tactical, and heuristic move selection
-- Live score and turn display
+- Live score display
 - Move hints
 - Undo support in player-versus-player games
 
@@ -43,6 +45,28 @@ python main.py
 ```
 
 Choose **VS PLAYER** for a local two-player game or **VS AI** and select a difficulty. Click an available line between adjacent dots to make a move. Completing a box adds it to the active player's score.
+
+## Paper Club preview
+
+```powershell
+python main.py --paper-club
+```
+
+The Qt shell opens maximized and supports **F11** fullscreen; **Escape** returns
+from fullscreen. During the interface migration, **Play** opens the current
+Tkinter game in a separate window. The full Paper Club screens, artwork,
+animations, audio, settings, instructions, and high scores are still in progress.
+See [the implementation roadmap](ROADMAP.md) for completed and upcoming work.
+
+## Development checks
+
+```powershell
+python -m unittest discover -s tests -v
+```
+
+The suite covers game rules, AI turn sequencing, invalid clicks, undo, full-match
+completion, Tkinter screen wiring, and Qt shell behavior. Qt checks run offscreen;
+Tkinter checks construct withdrawn windows. Both GUI runtimes must be installed.
 
 ## AI strategy
 
@@ -84,7 +108,7 @@ Minimax would recursively simulate future AI and opponent moves, assume that bot
 During a game:
 
 - **HINT** highlights a suggested move.
-- **UNDO** reverts the previous move in player-versus-player mode.
+- **UNDO** reverts the previous non-scoring move in player-versus-player mode.
 - **BACK** returns to mode selection.
 
 ## Build the Windows executable
@@ -107,8 +131,9 @@ The executable is generated at `dist/DotsAndBoxes.exe`. The `build/` and `dist/`
 
 ```text
 assets/             Images used by the interface
-core/               Game rules, heuristic hints, and AI logic
-ui/                 Screens and reusable interface components
+core/               UI-independent rules, turn sequencing, hints, and AI
+ui/                 Tkinter screens, board rendering, and the Qt shell
+tests/              Rules, controller, and desktop integration checks
 utils/              Shared constants
 DotsAndBoxes.spec   PyInstaller build configuration
 main.py             Application entry point
