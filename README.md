@@ -52,10 +52,16 @@ Choose **VS PLAYER** for a local two-player game or **VS AI** and select a diffi
 python main.py --paper-club
 ```
 
-The Qt shell opens maximized and supports **F11** fullscreen; **Escape** returns
-from fullscreen. During the interface migration, **Play** opens the current
-Tkinter game in a separate window. The full Paper Club screens, artwork,
-animations, audio, settings, instructions, and high scores are still in progress.
+The Paper Club preview includes a textured tabletop, layered paper surfaces,
+rounded headings, a welcome screen, and combined match setup. Choose a computer
+opponent or a friend, enter player names, and select a difficulty. Setup choices
+are remembered locally in `%LOCALAPPDATA%/DotsAndBoxes/settings.json`.
+
+The window opens maximized and supports **F11** fullscreen. **Escape** leaves
+fullscreen first, then returns from setup to the welcome screen. During the
+interface migration, **Start match** opens the configured Tkinter game in a
+separate window. The Qt game board, animations, audio, full settings hub,
+instructions, and high scores are still in progress.
 See [the implementation roadmap](ROADMAP.md) for completed and upcoming work.
 
 ## Development checks
@@ -66,7 +72,7 @@ python -m unittest discover -s tests -v
 
 The suite covers game rules, AI turn sequencing, invalid clicks, undo, full-match
 completion, Tkinter screen wiring, and Qt shell behavior. Qt checks run offscreen;
-Tkinter checks construct withdrawn windows. Both GUI runtimes must be installed.
+Tkinter checks construct withdrawn windows. Both GUI runtimes must be installed. Preference checks use isolated temporary files.
 
 ## AI strategy
 

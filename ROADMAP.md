@@ -8,7 +8,7 @@ and AI strategies. Work proceeds in the following dependency order.
 ## Progress
 
 - [x] Separate the rules model from drawing and introduce the Qt application shell.
-- [ ] Build the Paper Club visual foundation, welcome screen, and combined match setup.
+- [x] Build the Paper Club visual foundation, welcome screen, and combined match setup.
 - [ ] Add the responsive Qt board, match sidebar, keyboard controls, and pause/resume.
 - [ ] Add move/capture transitions, AI pacing, and reduced-motion support.
 - [ ] Add Settings, audio controls, original sound effects, and gentle background music.
@@ -31,8 +31,8 @@ invalid indices before they can reach the rules model.
 
 The existing game now uses this model/controller through a Tkinter renderer.
 Its launcher remains the default while the Qt gameplay screens are introduced.
-`python main.py --paper-club` opens the Qt shell, whose Play action launches the
-existing game. The shell supports resizing, maximized startup, F11 fullscreen,
+`python main.py --paper-club` opens the Qt interface. Play opens match setup;
+Start match launches the configured existing game while the Qt board is built. The shell supports resizing, maximized startup, F11 fullscreen,
 and Escape to leave fullscreen; window preference persistence comes with Settings.
 
 Verification: 25 automated checks cover rules, complete games at all three AI
@@ -41,9 +41,28 @@ layout/fullscreen/launch behavior. Dependency consistency and Python compilation
 checks also pass. The Qt shell has been visually inspected with the offscreen
 renderer supplied a Windows system font.
 
+## Completed welcome and setup — October 20, 2026
+
+Added the Paper Club tabletop background, layered paper surfaces, openly licensed
+Fredoka heading font, consistent native controls, responsive welcome screen, and
+combined opponent/difficulty/player-name setup. Decorative illustration hides in
+compact windows so the task controls retain room. The selected mode is explicit,
+AI difficulty descriptions match the existing strategies, player names survive
+opponent switches, and Enter can start a valid match from the name fields.
+
+Setup choices use atomic writes in the versioned local settings file, preserving
+other settings. Missing, damaged, or unwritable preferences do not prevent play.
+The configured match handoff preserves mode, difficulty, and player names in the
+existing game's controller and window title. No change to the AI strategies.
+
+The earlier Windows environment block has cleared. All 42 automated checks pass,
+including preference round trips, failure handling, keyboard input, launch
+arguments, and layouts at compact, normal, and wide sizes. Visual inspection
+covers both new screens. The nine flow/layout checks also pass independently at
+150% and 200% display scaling.
+
 ## Next increment
 
-Create the reusable Paper Club visual controls and surfaces, welcome screen, and
-combined opponent/difficulty/player-name setup. Keep gameplay accessible through
-the current interface until the Qt board is ready. Later features remain unchecked
-until implemented and verified.
+Build the responsive Qt game board and aligned match sidebar, with turn/thinking
+indicators, named scores, boxes remaining, edge preview, keyboard interaction,
+and pause/resume. Keep the completed welcome/setup flow and shared game rules.

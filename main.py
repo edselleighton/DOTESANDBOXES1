@@ -68,12 +68,23 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description="Dots and Boxes desktop game")
     parser.add_argument("--paper-club", action="store_true",
                         help="Open the new Paper Club application shell")
+    parser.add_argument("--mode", choices=("PVP", "AI"), help="Start a configured match")
+    parser.add_argument("--difficulty", choices=("easy", "medium", "hard"))
+    parser.add_argument("--player-one", default="Player 1")
+    parser.add_argument("--player-two", default="Player 2")
     args = parser.parse_args(argv)
+    if args.paper_club and args.mode:
+        parser.error("--paper-club cannot be combined with --mode")
+    if args.difficulty and args.mode != "AI":
+        parser.error("--difficulty requires --mode AI")
     if args.paper_club:
         from ui.qt_app import run
         return run()
     root = Tk()
     app = ScreenManager(root)
+    if args.mode:
+        app.show_screen("GameScreen", mode=args.mode, difficulty=args.difficulty,
+                        player_names=(args.player_one, args.player_two))
     root.mainloop()
     return 0
 

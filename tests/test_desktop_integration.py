@@ -1,6 +1,7 @@
 """Exercise real widget wiring without opening windows on the desktop."""
 
 import os
+import tempfile
 from pathlib import Path
 from types import SimpleNamespace
 import unittest
@@ -14,6 +15,8 @@ from PySide6.QtGui import QFont, QFontDatabase, QRawFont
 from core.game_engine import Move
 from test_game_engine import all_moves
 from ui.qt_app import PaperClubWindow, classic_command
+from core.game_engine import MatchConfig
+from utils.setup_preferences import SetupStore
 
 
 class ClassicGameIntegrationTests(unittest.TestCase):
@@ -45,7 +48,10 @@ class ClassicGameIntegrationTests(unittest.TestCase):
         self.assertEqual(result.place_info()["relwidth"], "1")
 
     def test_navigation_cancels_ai_and_resets_new_match(self):
-        self.manager.show_screen("GameScreen", mode="AI", difficulty="easy")
+        self.manager.show_screen("GameScreen", mode="AI", difficulty="easy",
+                                 player_names=("Sam", "Computer"))
+        self.assertEqual(self.game.controller.config.player_names, ("Sam", "Computer"))
+        self.assertIn("Sam vs Computer", self.root.title())
         self.click(Move("row", (0, 0)))
         self.click(Move("row", (1, 0)))
         self.assertEqual(len(self.game.engine.history), 1)
@@ -81,7 +87,9 @@ class QtShellTests(unittest.TestCase):
                 raise RuntimeError("Cannot load the Windows font for offscreen tests")
 
     def setUp(self):
-        self.window = PaperClubWindow()
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.window = PaperClubWindow(SetupStore(Path(self.temp.name) / "settings.json"))
 
     def tearDown(self):
         self.window.close()
@@ -112,7 +120,8 @@ class QtShellTests(unittest.TestCase):
     def test_play_launches_the_current_game_without_preview_flag(self):
         with patch("ui.qt_app.QProcess.startDetached", return_value=(True, 123)) as start:
             self.window.play_button.click()
-        program, arguments = classic_command()
+            self.window.setup.start_button.click()
+        program, arguments = classic_command(MatchConfig("AI", "medium", ("Player 1", "Computer")))
         start.assert_called_once_with(program, arguments)
         self.assertNotIn("--paper-club", arguments)
 

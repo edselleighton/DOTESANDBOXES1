@@ -91,14 +91,16 @@ class GameScreen(Frame):
             self.on_move, self.on_finished,
         )
 
-    def load(self, mode=None, difficulty=None, **kwargs):
+    def load(self, mode=None, difficulty=None, player_names=None, **kwargs):
         self.mode = mode or "PVP"
         self.difficulty = difficulty
         self.p2_icon_label.config(
             image=self.img_ai if self.mode == "AI" else self.img_player2
         )
         self.place(relwidth=1, relheight=1)
-        self.controller.start(MatchConfig(mode=self.mode, difficulty=difficulty))
+        names = player_names or ("Player 1", "Computer" if self.mode == "AI" else "Player 2")
+        self.manager.root.title(f"{names[0]} vs {names[1]} — Dots and Boxes")
+        self.controller.start(MatchConfig(mode=self.mode, difficulty=difficulty, player_names=names))
 
     def unload(self):
         self.controller.stop()
