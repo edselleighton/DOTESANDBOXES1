@@ -1,8 +1,9 @@
 # Dots and Boxes
 
 A desktop implementation of the classic Dots and Boxes game built with Python.
-The current playable interface uses Tkinter. The Paper Club redesign is being
-introduced with a Qt application shell and a shared, independently testable rules model.
+Paper Club uses PySide6/Qt for a textured paper interface, a responsive board,
+and a shared, independently testable rules model. The original Tkinter interface
+remains available with `--classic`.
 
 ## Features
 
@@ -12,6 +13,9 @@ introduced with a Qt application shell and a shared, independently testable rule
 - Live score display
 - Move hints
 - Undo support in player-versus-player games
+- Mouse edge preview, keyboard play, and a last-move marker
+- Pause/resume, including safe suspension of computer turns
+- Fullscreen on first launch, with remembered window preferences
 
 ## Requirements
 
@@ -30,7 +34,7 @@ python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
 
-Install the runtime dependency:
+Install the runtime dependencies:
 
 ```powershell
 pip install -r requirements.txt
@@ -44,24 +48,37 @@ Start the game from the repository root:
 python main.py
 ```
 
-Choose **VS PLAYER** for a local two-player game or **VS AI** and select a difficulty. Click an available line between adjacent dots to make a move. Completing a box adds it to the active player's score.
+Choose **Play a round**, then select **Computer** or **A friend**, enter names,
+and choose an AI difficulty when applicable. Click an available edge between
+adjacent dots. Completing a box adds it to your score and gives you another move.
 
-## Paper Club preview
+## Paper Club controls
 
 ```powershell
 python main.py --paper-club
 ```
 
-The Paper Club preview includes a textured tabletop, layered paper surfaces,
-rounded headings, a welcome screen, and combined match setup. Choose a computer
-opponent or a friend, enter player names, and select a difficulty. Setup choices
-are remembered locally in `%LOCALAPPDATA%/DotsAndBoxes/settings.json`.
+`--paper-club` is an alias for the default interface. Setup and window choices
+are remembered atomically in `%LOCALAPPDATA%/DotsAndBoxes/settings.json`.
+Missing or damaged preferences do not prevent play.
 
-The window opens maximized and supports **F11** fullscreen. **Escape** leaves
-fullscreen first, then returns from setup to the welcome screen. During the
-interface migration, **Start match** opens the configured Tkinter game in a
-separate window. The Qt game board, animations, audio, full settings hub,
-instructions, and high scores are still in progress.
+The game opens in true fullscreen on first launch. **F11** toggles fullscreen;
+closing the game remembers windowed/fullscreen mode, maximization, and window size.
+**Start match** plays in the same window. Wide windows show an aligned player
+sidebar; compact windows use a score strip above the board.
+
+- **Arrows** select an edge; **H / V** changes its orientation.
+- **Enter / Space** draws the selected edge. **Tab** moves to match controls.
+- **Hint** marks a suggested edge without playing it.
+- **Undo** reverses the last non-scoring move in two-player games.
+- **Pause / Escape** suspends a match. Minimizing also pauses; restore and resume
+  when ready. Computer moves cannot run while paused or after leaving a match.
+- **Home / New match** asks before discarding an unfinished match.
+
+Captured boxes show player initials (or 1/2 for matching initials), and gold
+rings mark the most recent edge. Completed matches retain the final board and
+scores. Animations, audio, the settings hub, instructions, high scores, and the
+full results experience are still in progress.
 See [the implementation roadmap](ROADMAP.md) for completed and upcoming work.
 
 ## Development checks
@@ -71,7 +88,8 @@ python -m unittest discover -s tests -v
 ```
 
 The suite covers game rules, AI turn sequencing, invalid clicks, undo, full-match
-completion, Tkinter screen wiring, and Qt shell behavior. Qt checks run offscreen;
+completion, Tkinter screen wiring, Qt mouse/keyboard input, pause/navigation,
+responsive layouts, and fullscreen persistence. Qt checks run offscreen;
 Tkinter checks construct withdrawn windows. Both GUI runtimes must be installed. Preference checks use isolated temporary files.
 
 ## AI strategy
@@ -115,7 +133,7 @@ During a game:
 
 - **HINT** highlights a suggested move.
 - **UNDO** reverts the previous non-scoring move in player-versus-player mode.
-- **BACK** returns to mode selection.
+- In the classic interface, **BACK** returns to mode selection.
 
 ## Build the Windows executable
 
@@ -131,16 +149,19 @@ Build with the tracked PyInstaller specification:
 pyinstaller DotsAndBoxes.spec
 ```
 
-The executable is generated at `dist/DotsAndBoxes.exe`. The `build/` and `dist/` directories are intentionally excluded from version control.
+The executable is generated at `dist/DotsAndBoxes.exe`. The `build/` and `dist/`
+directories are intentionally excluded from version control. Final verification
+of the Qt executable and its bundled assets is planned for the packaging milestone;
+the current UI milestone is verified from Python source.
 
 ## Project structure
 
 ```text
 assets/             Images used by the interface
 core/               UI-independent rules, turn sequencing, hints, and AI
-ui/                 Tkinter screens, board rendering, and the Qt shell
+ui/                 Paper Club screens, Qt board, and retained Tkinter interface
 tests/              Rules, controller, and desktop integration checks
-utils/              Shared constants
+utils/              Assets, shared constants, and atomic preferences
 DotsAndBoxes.spec   PyInstaller build configuration
 main.py             Application entry point
 ```

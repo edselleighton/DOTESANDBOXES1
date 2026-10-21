@@ -67,17 +67,18 @@ class ScreenManager:
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Dots and Boxes desktop game")
     parser.add_argument("--paper-club", action="store_true",
-                        help="Open the new Paper Club application shell")
+                        help="Open Paper Club (the default interface)")
+    parser.add_argument("--classic", action="store_true", help="Open the original Tkinter interface")
     parser.add_argument("--mode", choices=("PVP", "AI"), help="Start a configured match")
     parser.add_argument("--difficulty", choices=("easy", "medium", "hard"))
     parser.add_argument("--player-one", default="Player 1")
     parser.add_argument("--player-two", default="Player 2")
     args = parser.parse_args(argv)
-    if args.paper_club and args.mode:
-        parser.error("--paper-club cannot be combined with --mode")
+    if args.paper_club and (args.mode or args.classic):
+        parser.error("--paper-club cannot be combined with --mode or --classic")
     if args.difficulty and args.mode != "AI":
         parser.error("--difficulty requires --mode AI")
-    if args.paper_club:
+    if args.paper_club or (not args.classic and not args.mode):
         from ui.qt_app import run
         return run()
     root = Tk()

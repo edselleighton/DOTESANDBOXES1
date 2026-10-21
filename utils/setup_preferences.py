@@ -1,4 +1,4 @@
-"""Remember match setup in the shared versioned settings file."""
+"""Remember match setup and window preferences in shared versioned settings."""
 
 from dataclasses import asdict, dataclass
 import json
@@ -30,6 +30,21 @@ class SetupChoices:
         )
 
 
+@dataclass(frozen=True)
+class WindowPreferences:
+    fullscreen: bool = True
+    maximized: bool = False
+    width: int = 1180
+    height: int = 780
+
+    def __post_init__(self):
+        if type(self.fullscreen) is not bool or type(self.maximized) is not bool:
+            raise ValueError("Window modes must be boolean values")
+        for value, minimum in ((self.width, 800), (self.height, 480)):
+            if type(value) is not int or not minimum <= value <= 16384:
+                raise ValueError("Window dimensions are outside the supported range")
+
+
 class SetupStore:
     def __init__(self, path=None):
         base = Path(os.environ.get("LOCALAPPDATA", Path.home() / ".local" / "share"))
@@ -53,10 +68,27 @@ class SetupStore:
             return SetupChoices()
 
     def save(self, choices: SetupChoices):
+        return self._save_section("setup", asdict(choices))
+
+    def load_window(self):
+        try:
+            data = self._read().get("window", {})
+            if not isinstance(data, dict):
+                return WindowPreferences()
+            keys = ("fullscreen", "maximized", "width", "height")
+            return WindowPreferences(**{key: data[key] for key in keys if key in data})
+        except (TypeError, ValueError):
+            return WindowPreferences()
+
+    def save_window(self, preferences: WindowPreferences):
+        return self._save_section("window", asdict(preferences))
+
+    def _save_section(self, section, values):
         temporary = None
         try:
             data = self._read()
-            data.update(version=1, setup=asdict(choices))
+            data["version"] = 1
+            data[section] = values
             self.path.parent.mkdir(parents=True, exist_ok=True)
             with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=self.path.parent,
                                              prefix="settings-", suffix=".tmp", delete=False) as stream:

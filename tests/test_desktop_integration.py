@@ -14,7 +14,7 @@ from PySide6.QtGui import QFont, QFontDatabase, QRawFont
 
 from core.game_engine import Move
 from test_game_engine import all_moves
-from ui.qt_app import PaperClubWindow, classic_command
+from ui.qt_app import PaperClubWindow
 from core.game_engine import MatchConfig
 from utils.setup_preferences import SetupStore
 
@@ -92,6 +92,7 @@ class QtShellTests(unittest.TestCase):
         self.window = PaperClubWindow(SetupStore(Path(self.temp.name) / "settings.json"))
 
     def tearDown(self):
+        self.window.match.stop()
         self.window.close()
 
     def test_shell_layout_fits_small_and_large_windows(self):
@@ -117,13 +118,13 @@ class QtShellTests(unittest.TestCase):
         self.assertTrue(self.window.isMaximized())
         self.assertFalse(self.window.fullscreen_action.isChecked())
 
-    def test_play_launches_the_current_game_without_preview_flag(self):
-        with patch("ui.qt_app.QProcess.startDetached", return_value=(True, 123)) as start:
-            self.window.play_button.click()
-            self.window.setup.start_button.click()
-        program, arguments = classic_command(MatchConfig("AI", "medium", ("Player 1", "Computer")))
-        start.assert_called_once_with(program, arguments)
-        self.assertNotIn("--paper-club", arguments)
+    def test_play_opens_a_configured_match_in_the_same_window(self):
+        self.window.play_button.click()
+        self.window.setup.start_button.click()
+        self.assertIs(self.window.pages.currentWidget(), self.window.match)
+        self.assertEqual(self.window.match.controller.config,
+                         MatchConfig("AI", "medium", ("Player 1", "Computer")))
+        self.assertTrue(self.window.match.controller.accepts_human_move)
 
 
 if __name__ == "__main__":

@@ -35,6 +35,11 @@ def stylesheet(heading_font):
         QLabel#lead { font-size: 19px; }
         QLabel#secondary { font-size: 14px; color: #56635C; }
         QLabel#fieldLabel { font-size: 14px; font-weight: 600; }
+        QLabel#matchScore { font-family: '%s'; font-size: 42px; font-weight: 600; }
+        QLabel#turnBanner { font-family: '%s'; font-size: 25px; font-weight: 500; padding: 12px 20px; }
+        QLabel#remainingBoxes { font-size: 18px; padding: 16px 0;
+                                border-top: 1px solid #D7CCB7; border-bottom: 1px solid #D7CCB7; }
+        QLabel#boardCaption { font-size: 14px; color: #233D3A; padding-bottom: 4px; }
         QLabel#blueLabel { font-size: 14px; font-weight: 600; color: #265A80; }
         QLabel#coralLabel { font-size: 14px; font-weight: 600; color: #B44332; }
         QLabel#error { color: #A52D23; font-size: 14px; }
@@ -53,6 +58,7 @@ def stylesheet(heading_font):
         QPushButton#quiet:focus { border-color: #265A80; }
         QPushButton:checked { background: #DCE6D4; border: 2px solid #57704F; padding: 9px 17px; }
         QPushButton:disabled { color: #7B7B70; background: #EAE6DC; border-color: #D0C9B9; }
+        QPushButton#primary:disabled { color: #7B7B70; background: #EAE6DC; border-color: #D0C9B9; }
         QLineEdit { background: #FFFCF5; border: 1px solid #B8AD95; border-radius: 7px;
                     padding: 10px 12px; min-height: 22px; selection-background-color: #DCE6D4;
                     selection-color: #233D3A; }
@@ -61,7 +67,7 @@ def stylesheet(heading_font):
         QMenuBar, QMenu { background: #FFF9EC; }
         QMenuBar::item:selected, QMenu::item:selected { background: #DCE6D4; }
         QToolTip { color: #233D3A; background: #FFF9EC; border: 1px solid #B8AD95; }
-    """ % (heading_font, heading_font, heading_font)
+    """ % (heading_font, heading_font, heading_font, heading_font, heading_font)
 
 
 def label(text, role="secondary"):

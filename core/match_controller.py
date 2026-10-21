@@ -16,17 +16,20 @@ class MatchController:
         self._ai_delay_ms = ai_delay_ms
         self.config = MatchConfig()
         self.active = False
+        self.paused = False
         self._generation = 0
         self._pending = None
+        self._pending_token = None
 
     @property
     def accepts_human_move(self):
-        return (self.active and not self.engine.finished
+        return (self.active and not self.paused and not self.engine.finished
                 and (self.config.mode == "PVP" or self.engine.current_player == 1))
 
     @property
     def can_undo(self):
-        return self.active and self.config.mode == "PVP" and self.engine.can_undo
+        return (self.active and not self.paused
+                and self.config.mode == "PVP" and self.engine.can_undo)
 
     def start(self, config: MatchConfig):
         self.stop()
@@ -37,7 +40,33 @@ class MatchController:
 
     def stop(self):
         self.active = False
+        self.paused = False
         self._generation += 1
+        self._cancel_pending()
+
+    def pause(self):
+        """Preserve the match while suspending input and any computer turn."""
+        if not self.active or self.paused:
+            return False
+        self.paused = True
+        self._generation += 1
+        self._cancel_pending()
+        self._on_move(None)
+        return True
+
+    def resume(self):
+        """Resume once; a suspended computer turn receives a fresh delay."""
+        if not self.active or not self.paused:
+            return False
+        self.paused = False
+        generation = self._generation
+        self._on_move(None)
+        if generation == self._generation:
+            self._queue_ai()
+        return True
+
+    def _cancel_pending(self):
+        self._pending_token = None
         if self._pending is not None:
             self._cancel(self._pending)
             self._pending = None
@@ -74,19 +103,23 @@ class MatchController:
         return outcome
 
     def _queue_ai(self):
-        if (not self.active or self.config.mode != "AI"
+        if (not self.active or self.paused or self.config.mode != "AI"
                 or self.engine.current_player != 2 or self.engine.finished
                 or self._pending is not None):
             return
         generation = self._generation
+        token = object()
+        self._pending_token = token
 
         def run():
             # A canceled callback may already have entered an event queue. It must
-            # never clear a newer match's pending handle or mutate its state.
-            if generation != self._generation:
+            # never clear a newer pending handle, nor run twice after resuming.
+            if (generation != self._generation
+                    or token is not self._pending_token):
                 return
             self._pending = None
-            if (self.active and self.config.mode == "AI"
+            self._pending_token = None
+            if (self.active and not self.paused and self.config.mode == "AI"
                     and self.engine.current_player == 2 and not self.engine.finished):
                 self._play(lambda: self.engine.ai_move(self.config.difficulty))
 
