@@ -10,7 +10,7 @@ and AI strategies. Work proceeds in the following dependency order.
 - [x] Separate the rules model from drawing and introduce the Qt application shell.
 - [x] Build the Paper Club visual foundation, welcome screen, and combined match setup.
 - [x] Add the responsive Qt board, match sidebar, keyboard controls, and pause/resume.
-- [ ] Add move/capture transitions, AI pacing, and reduced-motion support.
+- [x] Add move/capture transitions, AI pacing, and reduced-motion support.
 - [ ] Add Settings, audio controls, original sound effects, and gentle background music.
 - [ ] Add illustrated instructions, practice, and persistent local high scores.
 - [ ] Finish results, personal-best feedback, same-settings rematches, and celebration.
@@ -62,9 +62,10 @@ covers both new screens. The nine flow/layout checks also pass independently at
 
 ## Next increment
 
-Add restrained move/capture and screen transitions, control feedback, reduced
-motion, and animation suspension while minimized. Preserve immediate scoring,
-safe input, and the existing one-move-at-a-time computer turn scheduling.
+Add the Settings hub with Audio & Display controls, independent music/effect
+volume and mute, original audio, fullscreen, stronger board contrast, and reduced
+motion. Opening settings during play must safely pause and preserve the match.
+Wait for the next explicit approval before starting this increment.
 
 ## Completed board and match controls — October 21, 2026
 
@@ -99,3 +100,29 @@ names, and layout boundaries. The 13 Qt match checks also pass at both 150% and
 200% scaling. Dependency and Python compilation checks pass. The temporary
 Windows Application Control block observed during the interrupted session is no
 longer occurring; the final real-AI checks succeeded without policy changes.
+
+## Completed motion and feedback — October 24, 2026
+
+Added native Qt feedback: 120 ms button presses, 160 ms ink lines, 220 ms capture
+fills, and 180 ms page fades. Scores and ownership update immediately. Board
+input, Hint, and Undo wait for the short board effect, while Pause remains
+available. Consecutive computer captures are individually paced at 300 ms,
+retaining the controller's cancellation and stale-callback protection.
+
+View > Reduced motion is available now and persists atomically alongside other
+preferences. Windows client-area animation preferences supply the initial default
+until overridden. Reduced motion, pause, navigation, hiding, and minimizing settle
+active effects; restoration never replays old moves. Button feedback preserves
+native keyboard activation, focus, hit targets, and checked/disabled states.
+
+Verification: all 94 automated checks pass, including the full rules and real-AI
+regression suite, complete animated games, immediate capture scores, input gates,
+rapid navigation, minimized cleanup, and preference persistence. All 17 motion
+and control checks also pass at 150% and 200% scaling. Dependency, compilation,
+and whitespace checks pass. Actual intermediate capture frames and the compact
+paused layout were visually inspected. Forty offscreen board captures averaged
+2.37 ms (3.71 ms maximum); this is a local drawing diagnostic, not a display
+frame-rate guarantee. The earlier approval-service limit has cleared.
+
+This completes only the motion increment. Settings/audio, instructions/high
+scores, final results, and final packaging remain pending.

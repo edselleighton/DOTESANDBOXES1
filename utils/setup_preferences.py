@@ -1,4 +1,4 @@
-"""Remember match setup and window preferences in shared versioned settings."""
+"""Remember match setup, window, and display preferences in versioned settings."""
 
 from dataclasses import asdict, dataclass
 import json
@@ -83,11 +83,25 @@ class SetupStore:
     def save_window(self, preferences: WindowPreferences):
         return self._save_section("window", asdict(preferences))
 
-    def _save_section(self, section, values):
+    def load_reduced_motion(self, default: bool = False) -> bool:
+        if type(default) is not bool:
+            raise ValueError("Reduced motion default must be a boolean")
+        display = self._read().get("display", {})
+        value = display.get("reduced_motion") if isinstance(display, dict) else None
+        return value if type(value) is bool else default
+
+    def save_reduced_motion(self, enabled: bool) -> bool:
+        if type(enabled) is not bool:
+            return False
+        return self._save_section("display", {"reduced_motion": enabled}, merge=True)
+
+    def _save_section(self, section, values, *, merge=False):
         temporary = None
         try:
             data = self._read()
             data["version"] = 1
+            if merge and isinstance(data.get(section), dict):
+                values = {**data[section], **values}
             data[section] = values
             self.path.parent.mkdir(parents=True, exist_ok=True)
             with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=self.path.parent,

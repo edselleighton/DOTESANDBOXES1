@@ -4,7 +4,8 @@ import random
 
 from PySide6.QtCore import QRectF, QSize, Qt
 from PySide6.QtGui import QColor, QFontDatabase, QPainter, QPainterPath, QPen, QPixmap
-from PySide6.QtWidgets import QFrame, QLabel, QPushButton, QWidget
+from PySide6.QtWidgets import QFrame, QLabel, QWidget
+from ui.motion_controls import MotionButton
 
 from utils.assets import asset_path
 
@@ -78,7 +79,7 @@ def label(text, role="secondary"):
 
 
 def button(text, role="", checkable=False):
-    widget = QPushButton(text)
+    widget = MotionButton(text)
     widget.setObjectName(role)
     widget.setCheckable(checkable)
     widget.setMinimumHeight(44)

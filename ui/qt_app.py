@@ -3,10 +3,12 @@
 from PySide6.QtCore import QEvent, QSignalBlocker
 from PySide6.QtGui import QAction, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
-    QApplication, QHBoxLayout, QMainWindow, QMessageBox, QStackedWidget, QVBoxLayout,
+    QApplication, QHBoxLayout, QMainWindow, QMessageBox, QVBoxLayout,
 )
 
 from ui.match_page import MatchPage
+from ui.motion import MotionPolicy, PageStack, system_reduced_motion
+from ui.motion_controls import MotionButton
 from ui.paper_screens import SetupPage, WelcomePage
 from ui.paper_style import Tabletop, button, label, load_heading_font, stylesheet
 from utils.setup_preferences import SetupStore, WindowPreferences
@@ -17,6 +19,7 @@ class PaperClubWindow(QMainWindow):
         super().__init__()
         self.store = setup_store if setup_store is not None else SetupStore()
         self.window_preferences = self.store.load_window()
+        self.motion = MotionPolicy(self.store.load_reduced_motion(system_reduced_motion()), self)
         self.setWindowTitle("Dots and Boxes — Paper Club")
         self.setMinimumSize(800, 480)
         self.resize(self.window_preferences.width, self.window_preferences.height)
@@ -38,10 +41,11 @@ class PaperClubWindow(QMainWindow):
         header.addWidget(exit_button)
         self.table_layout.addLayout(header)
 
-        self.pages = QStackedWidget()
+        self.pages = PageStack(self.motion)
         self.home = WelcomePage()
         self.setup = SetupPage(self.store)
         self.match = MatchPage()
+        self.match.set_motion_policy(self.motion)
         self.pages.addWidget(self.home)
         self.pages.addWidget(self.setup)
         self.pages.addWidget(self.match)
@@ -65,8 +69,20 @@ class PaperClubWindow(QMainWindow):
         self.fullscreen_action.toggled.connect(self.set_fullscreen)
         view_menu.addAction(self.fullscreen_action)
         self.fullscreen_button.clicked.connect(self.fullscreen_action.trigger)
+        self.reduced_motion_action = QAction("Reduced motion", self)
+        self.reduced_motion_action.setCheckable(True)
+        self.reduced_motion_action.setChecked(self.motion.reduced_motion)
+        self.reduced_motion_action.toggled.connect(self.set_reduced_motion)
+        view_menu.addAction(self.reduced_motion_action)
         self.escape_shortcut = QShortcut(QKeySequence("Escape"), self)
         self.escape_shortcut.activated.connect(self.go_back)
+        for control in self.findChildren(MotionButton):
+            control.set_motion_policy(self.motion)
+
+    def set_reduced_motion(self, enabled):
+        self.motion.set_reduced_motion(enabled)
+        if not self.store.save_reduced_motion(enabled):
+            self.statusBar().showMessage("Reduced motion changed for this session; preferences could not be saved.", 5000)
 
     def show_saved_window(self):
         preferences = self.window_preferences
@@ -143,6 +159,7 @@ class PaperClubWindow(QMainWindow):
         if event.type() == QEvent.Type.WindowStateChange and hasattr(self, "match"):
             if self.isMinimized():
                 self.match.controller.pause()
+            self.motion.set_suspended(self.isMinimized())
             enabled = self.isFullScreen()
             with QSignalBlocker(self.fullscreen_action):
                 self.fullscreen_action.setChecked(enabled)
@@ -150,6 +167,7 @@ class PaperClubWindow(QMainWindow):
         super().changeEvent(event)
 
     def closeEvent(self, event):
+        self.motion.set_suspended(True)
         self.match.stop()
         size = self.normalGeometry().size()
         self.store.save_window(WindowPreferences(

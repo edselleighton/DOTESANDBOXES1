@@ -10,6 +10,7 @@ from core.game_engine import GameEngine, Move
 from core.match_controller import MatchController
 from ui.paper_style import BLUE, CORAL, INK, PaperSurface, button, label
 from ui.qt_board import GameBoard
+from ui.motion import AI_MOVE_MS
 
 
 class Avatar(QWidget):
@@ -195,6 +196,8 @@ class MatchPage(QWidget):
     def __init__(self):
         super().__init__()
         self.engine = GameEngine()
+        self.motion_policy = None
+        self._explanation = ""
         self._ai_error = ""
         self.timers = set()
         self.controller = MatchController(self.engine, self._schedule, self._cancel,
@@ -234,7 +237,7 @@ class MatchPage(QWidget):
         board_layout.setContentsMargins(12, 12, 12, 24)
         board_layout.setSpacing(0)
         self.board = GameBoard(self.engine)
-        self.board.move_requested.connect(self.controller.play_human)
+        self.board.move_requested.connect(self.play_human)
         board_layout.addWidget(self.board, 1)
         self.caption = label("Complete a box. Play again.", "boardCaption")
         self.caption.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -294,12 +297,38 @@ class MatchPage(QWidget):
         QWidget.setTabOrder(self.compact_actions.hint, self.compact_actions.undo)
         QWidget.setTabOrder(self.compact_actions.undo, self.compact_actions.pause)
         QWidget.setTabOrder(self.compact_actions.pause, self.compact_home)
+        self.board.feedback_changed.connect(self._sync_motion_input)
+
+    def set_motion_policy(self, policy):
+        self.motion_policy = policy
+        self.board.set_motion_policy(policy)
+
+    def play_human(self, move):
+        if not self.board.animating:
+            return self.controller.play_human(move)
+        return None
+
+    def _sync_motion_input(self):
+        busy = self.board.animating
+        explanation = "Finishing this move…" if busy else self._explanation
+        self.action_explanation.setText(explanation)
+        self.compact_explanation.setText(explanation)
+        for actions in (self.actions, self.compact_actions):
+            actions.hint.setEnabled(self.controller.accepts_human_move and not busy)
+            actions.undo.setEnabled(self.controller.can_undo and not busy)
+            for control in (actions.hint, actions.undo):
+                reason = ("Suggest an available edge." if control is actions.hint and control.isEnabled()
+                          else explanation)
+                control.setToolTip(reason)
+                control.setAccessibleDescription(reason)
 
     def _selection_changed(self, text):
         self.keyboard_help.setText(text + "  ·  Enter: draw · H / V: direction"
                                    if self.board.keyboard_selection else self._keyboard_instructions)
 
     def _schedule(self, delay, callback):
+        if self.motion_policy and self.motion_policy.enabled:
+            delay = max(AI_MOVE_MS, delay)
         timer = QTimer(self)
         timer.setSingleShot(True)
         self.timers.add(timer)
@@ -326,6 +355,7 @@ class MatchPage(QWidget):
         timer.deleteLater()
 
     def start(self, config):
+        self.board.finish_feedback()
         self._ai_error = ""
         self.board.selected = Move("row", (0, 0))
         self.board.keyboard_selection = False
@@ -334,8 +364,12 @@ class MatchPage(QWidget):
 
     def stop(self):
         self.controller.stop()
+        self.board.refresh(False, False, self.controller.config.player_names)
+        self.board.finish_feedback()
 
     def _on_move(self, outcome):
+        if outcome is None:
+            self.board.finish_feedback()
         if outcome is not None:
             self._ai_error = ""
         config = self.controller.config
@@ -363,6 +397,8 @@ class MatchPage(QWidget):
                                    current == index + 1 and not finished and not paused)
         self.compact_turn.setText(f"{turn}   ·   {25 - sum(self.engine.scores)} left")
         self.board.refresh(self.controller.accepts_human_move, paused, config.player_names)
+        if outcome is not None:
+            self.board.animate_move(outcome)
         if finished:
             explanation = "All 25 boxes claimed. Start a new game from Home."
         elif paused:
@@ -377,19 +413,12 @@ class MatchPage(QWidget):
         else:
             explanation = "Undo removes the last non-scoring move."
         explanation = self._ai_error or explanation
-        self.action_explanation.setText(explanation)
-        self.compact_explanation.setText(explanation)
+        self._explanation = explanation
         for actions in (self.actions, self.compact_actions):
-            actions.hint.setEnabled(self.controller.accepts_human_move)
-            actions.undo.setEnabled(self.controller.can_undo)
             actions.pause.setEnabled(self.controller.active)
             actions.pause.setText("Resume" if paused else "Pause")
             actions.pause.setIcon(action_icon("resume" if paused else "pause", INK))
-            for control in (actions.hint, actions.undo):
-                reason = ("Suggest an available edge." if control is actions.hint and control.isEnabled()
-                          else explanation)
-                control.setToolTip(reason)
-                control.setAccessibleDescription(reason)
+        self._sync_motion_input()
         self.new_button.setVisible(finished)
         if outcome and outcome.captured_boxes:
             self.caption.setText(f"+{len(outcome.captured_boxes)} · Complete a box. Play again.")
@@ -403,10 +432,11 @@ class MatchPage(QWidget):
         self.new_button.setFocus() if not self.stage.compact else self.compact_home.setFocus()
 
     def show_hint(self):
-        self.board.show_hint(self.controller.get_hint())
+        if not self.board.animating:
+            self.board.show_hint(self.controller.get_hint())
 
     def undo(self):
-        if self.controller.undo_move():
+        if not self.board.animating and self.controller.undo_move():
             self.board.setFocus()
 
     def toggle_pause(self):

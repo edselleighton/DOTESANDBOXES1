@@ -89,7 +89,9 @@ class QtShellTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
-        self.window = PaperClubWindow(SetupStore(Path(self.temp.name) / "settings.json"))
+        store = SetupStore(Path(self.temp.name) / "settings.json")
+        store.save_reduced_motion(True)
+        self.window = PaperClubWindow(store)
 
     def tearDown(self):
         self.window.match.stop()

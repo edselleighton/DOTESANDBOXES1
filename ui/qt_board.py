@@ -1,22 +1,32 @@
 """Responsive, keyboard-operable presentation of the shared game state."""
 
-from PySide6.QtCore import QPointF, QRectF, QSize, Qt, Signal
+from PySide6.QtCore import QEasingCurve, QPointF, QRectF, QSize, Qt, QVariantAnimation, Signal
 from PySide6.QtGui import QColor, QFont, QPainter, QPen
 from PySide6.QtWidgets import QSizePolicy, QWidget
 
 from core.game_engine import Move
 from ui.board_geometry import BoardGeometry
 from ui.paper_style import BLUE, CORAL, INK
+from ui.motion import CAPTURE_MS, LINE_MS
 
 
 class GameBoard(QWidget):
     move_requested = Signal(object)
     selection_changed = Signal(str)
+    feedback_changed = Signal()
 
     def __init__(self, engine, parent=None):
         super().__init__(parent)
         self.engine = engine
         self.input_enabled = False
+        self._accepts_input = False
+        self.motion_policy = None
+        self.feedback = None
+        self.feedback_elapsed = 0.0
+        self.animation = QVariantAnimation(self)
+        self.animation.valueChanged.connect(self._advance_feedback)
+        self.animation.finished.connect(self.finish_feedback)
+        self._easing = QEasingCurve(QEasingCurve.Type.OutCubic)
         self.paused = False
         self.names = ("Player 1", "Player 2")
         self.selected = Move("row", (0, 0))
@@ -53,13 +63,58 @@ class GameBoard(QWidget):
         return geometry.hit_test(point.x(), point.y())
 
     def refresh(self, accepts_input, paused, names):
-        self.input_enabled = accepts_input
+        self._accepts_input = accepts_input
+        self.input_enabled = accepts_input and not self.animating
         self.paused = paused
         self.names = names
         self.hovered = None
         self.hint = None
         self._announce_selection()
         self.update()
+
+    @property
+    def animating(self):
+        return self.feedback is not None
+
+    def set_motion_policy(self, policy):
+        self.motion_policy = policy
+        policy.changed.connect(self._motion_changed)
+        self._motion_changed()
+
+    def _motion_changed(self):
+        if not self.motion_policy.enabled:
+            self.finish_feedback()
+
+    def animate_move(self, outcome):
+        self.finish_feedback()
+        if not self.motion_policy or not self.motion_policy.enabled or not self.isVisible():
+            return
+        self.feedback = outcome
+        self.feedback_elapsed = 0.0
+        self.input_enabled = False
+        duration = CAPTURE_MS if outcome.captured_boxes else LINE_MS
+        self.animation.setDuration(duration)
+        self.animation.setStartValue(0.0)
+        self.animation.setEndValue(float(duration))
+        self.animation.start()
+        self.feedback_changed.emit()
+
+    def _advance_feedback(self, value):
+        self.feedback_elapsed = float(value)
+        self.update()
+
+    def finish_feedback(self):
+        was_animating = self.animating
+        self.animation.stop()
+        self.feedback = None
+        self.input_enabled = self._accepts_input and not self.paused
+        self.update()
+        if was_animating:
+            self.feedback_changed.emit()
+
+    def hideEvent(self, event):
+        self.finish_feedback()
+        super().hideEvent(event)
 
     def show_hint(self, move):
         self.hint = move
@@ -151,10 +206,11 @@ class GameBoard(QWidget):
         gap = geometry.spacing
         line_width = max(3, min(6, gap * .065))
 
-        def line(move, color, width=line_width, style=Qt.PenStyle.SolidLine):
+        def line(move, color, width=line_width, style=Qt.PenStyle.SolidLine, progress=1.0):
             sx, sy, ex, ey = geometry.edge_points(move)
             painter.setPen(QPen(QColor(color), width, style, Qt.PenCapStyle.RoundCap))
-            painter.drawLine(QPointF(sx, sy), QPointF(ex, ey))
+            painter.drawLine(QPointF(sx, sy), QPointF(sx + (ex - sx) * progress,
+                                                     sy + (ey - sy) * progress))
 
         # Ownership uses initials as well as color, including identical names.
         initials = [name.strip()[0].upper() for name in self.names]
@@ -168,10 +224,14 @@ class GameBoard(QWidget):
             for y in range(5):
                 owner = int(self.engine.box_owner[x, y])
                 if owner:
+                    if self.feedback and (x, y) in self.feedback.captured_boxes:
+                        painter.setOpacity(self._easing.valueForProgress(
+                            min(1.0, self.feedback_elapsed / CAPTURE_MS)))
                     rect = QRectF((x + .5) * gap, (y + .5) * gap, gap, gap)
                     painter.fillRect(rect, QColor("#D3E5EF" if owner == 1 else "#F5D8C9"))
                     painter.setPen(QColor(BLUE if owner == 1 else CORAL))
                     painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, initials[owner - 1])
+                    painter.setOpacity(1.0)
         for x in range(6):
             for y in range(6):
                 if x < 5:
@@ -179,7 +239,9 @@ class GameBoard(QWidget):
                 if y < 5:
                     line(Move("col", (x, y)), "#D2C6AE", 1.2)
         for outcome in self.engine.history:
-            line(outcome.move, BLUE if outcome.player == 1 else CORAL)
+            progress = (self._easing.valueForProgress(min(1.0, self.feedback_elapsed / LINE_MS))
+                        if outcome is self.feedback else 1.0)
+            line(outcome.move, BLUE if outcome.player == 1 else CORAL, progress=progress)
 
         preview = self.hovered or (self.selected if self.hasFocus() and self.keyboard_selection else None)
         if self.input_enabled and preview and self.engine.is_legal(preview):

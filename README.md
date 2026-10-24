@@ -16,6 +16,7 @@ remains available with `--classic`.
 - Mouse edge preview, keyboard play, and a last-move marker
 - Pause/resume, including safe suspension of computer turns
 - Fullscreen on first launch, with remembered window preferences
+- Short move, capture, button, and screen animations with a saved reduced-motion option
 
 ## Requirements
 
@@ -74,11 +75,18 @@ sidebar; compact windows use a score strip above the board.
 - **Pause / Escape** suspends a match. Minimizing also pauses; restore and resume
   when ready. Computer moves cannot run while paused or after leaving a match.
 - **Home / New match** asks before discarding an unfinished match.
+- **View > Reduced motion** switches to immediate visual feedback and remembers
+  your choice. Until you choose, Windows animation preferences set the default.
 
 Captured boxes show player initials (or 1/2 for matching initials), and gold
 rings mark the most recent edge. Completed matches retain the final board and
-scores. Animations, audio, the settings hub, instructions, high scores, and the
-full results experience are still in progress.
+scores. Scores update immediately while new lines draw and captured boxes fill.
+Move input, Hint, and Undo wait briefly for that feedback; Pause stays available.
+Computer moves are paced individually, including consecutive captures. Pausing,
+leaving a match, or minimizing settles active effects without replaying moves.
+
+Audio, the settings hub, instructions, high scores, and the full results
+experience are still in progress.
 See [the implementation roadmap](ROADMAP.md) for completed and upcoming work.
 
 ## Development checks
@@ -89,7 +97,8 @@ python -m unittest discover -s tests -v
 
 The suite covers game rules, AI turn sequencing, invalid clicks, undo, full-match
 completion, Tkinter screen wiring, Qt mouse/keyboard input, pause/navigation,
-responsive layouts, and fullscreen persistence. Qt checks run offscreen;
+responsive layouts, fullscreen persistence, animation interruption, reduced
+motion, and consecutive computer captures. Qt checks run offscreen;
 Tkinter checks construct withdrawn windows. Both GUI runtimes must be installed. Preference checks use isolated temporary files.
 
 ## AI strategy

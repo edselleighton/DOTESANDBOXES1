@@ -31,6 +31,7 @@ class QtMatchTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.store = SetupStore(Path(self.temp.name) / "settings.json")
+        self.store.save_reduced_motion(True)  # Immediate-state flow tests; timing is covered separately.
         self.window = PaperClubWindow(self.store)
         self.addCleanup(self.window.close)
         self.addCleanup(self.window.match.stop)

@@ -131,5 +131,81 @@ class SetupPreferencesTests(unittest.TestCase):
         self.assertFalse(SetupStore(blocker / "settings.json").save_window(WindowPreferences()))
 
 
+    def test_reduced_motion_round_trip_overrides_system_default(self):
+        for enabled in (True, False):
+            with self.subTest(enabled=enabled):
+                self.assertTrue(self.store.save_reduced_motion(enabled))
+                self.assertIs(SetupStore(self.path).load_reduced_motion(not enabled), enabled)
+
+    def test_missing_or_malformed_motion_preference_uses_system_default(self):
+        self.assertFalse(self.store.load_reduced_motion())
+        self.assertTrue(self.store.load_reduced_motion(True))
+        for content in (
+            "broken json", "[]", '{"version":2,"display":{"reduced_motion":false}}',
+            '{"version":1}', '{"version":1,"display":null}',
+            '{"version":1,"display":[]}', '{"version":1,"display":{}}',
+        ):
+            with self.subTest(content=content):
+                self.path.write_text(content, encoding="utf-8")
+                self.assertTrue(self.store.load_reduced_motion(True))
+                self.assertFalse(self.store.load_reduced_motion(False))
+        for value in (None, 0, 1, "false", "true", [], {}):
+            with self.subTest(value=value):
+                self.path.write_text(json.dumps({
+                    "version": 1, "display": {"reduced_motion": value},
+                }), encoding="utf-8")
+                self.assertTrue(self.store.load_reduced_motion(True))
+                self.assertFalse(self.store.load_reduced_motion(False))
+
+    def test_motion_save_preserves_other_display_and_settings_values(self):
+        self.path.write_text(json.dumps({
+            "version": 1, "audio": {"music": 15},
+            "display": {"contrast": "strong", "future_option": {"value": 3}},
+        }), encoding="utf-8")
+        choices = SetupChoices("PVP", "hard", "Sam", "Robin")
+        window = WindowPreferences(False, True, 1180, 780)
+        self.assertTrue(self.store.save(choices))
+        self.assertTrue(self.store.save_window(window))
+        self.assertTrue(self.store.save_reduced_motion(True))
+        self.assertEqual(self.store.load(), choices)
+        self.assertEqual(self.store.load_window(), window)
+        data = json.loads(self.path.read_text(encoding="utf-8"))
+        self.assertEqual(data["audio"], {"music": 15})
+        self.assertEqual(data["display"], {
+            "reduced_motion": True, "contrast": "strong", "future_option": {"value": 3},
+        })
+        self.assertTrue(self.store.save(SetupChoices()))
+        self.assertTrue(self.store.save_window(WindowPreferences()))
+        self.assertTrue(self.store.load_reduced_motion())
+
+    def test_motion_save_repairs_invalid_display_section(self):
+        for display in (None, [], "invalid"):
+            with self.subTest(display=display):
+                self.path.write_text(json.dumps({"version": 1, "display": display}),
+                                     encoding="utf-8")
+                self.assertTrue(self.store.save_reduced_motion(True))
+                self.assertTrue(self.store.load_reduced_motion())
+
+    def test_invalid_motion_arguments_do_not_coerce_truthiness(self):
+        self.store.save_reduced_motion(True)
+        original = self.path.read_bytes()
+        for value in (None, 0, 1, "false", [], {}):
+            with self.subTest(value=value):
+                self.assertFalse(self.store.save_reduced_motion(value))
+                self.assertEqual(self.path.read_bytes(), original)
+                with self.assertRaises(ValueError):
+                    self.store.load_reduced_motion(value)
+
+    def test_failed_motion_save_preserves_existing_file(self):
+        self.store.save(SetupChoices("PVP", "easy", "Sam", "Robin"))
+        self.store.save_reduced_motion(False)
+        original = self.path.read_bytes()
+        with patch("utils.setup_preferences.os.replace", side_effect=PermissionError):
+            self.assertFalse(self.store.save_reduced_motion(True))
+        self.assertEqual(self.path.read_bytes(), original)
+        self.assertFalse(self.store.load_reduced_motion(True))
+        self.assertEqual(list(self.path.parent.glob("*.tmp")), [])
+
+
 if __name__ == "__main__":
     unittest.main()
