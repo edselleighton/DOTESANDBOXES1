@@ -9,6 +9,9 @@ from ui.board_geometry import BoardGeometry
 from ui.paper_style import BLUE, CORAL, INK
 from ui.motion import CAPTURE_MS, LINE_MS
 
+BOARD_BLUE = "#3589B8"
+BOARD_CORAL = "#D6684C"
+
 
 class GameBoard(QWidget):
     move_requested = Signal(object)
@@ -48,7 +51,7 @@ class GameBoard(QWidget):
         return QSize(560, 560)
 
     def board_geometry(self):
-        size = max(1, min(self.width(), self.height()) - 8)
+        size = max(1, min(self.width(), self.height()) - 2)
         return BoardGeometry(size), QPointF((self.width() - size) / 2,
                                            (self.height() - size) / 2)
 
@@ -195,6 +198,7 @@ class GameBoard(QWidget):
         super().focusInEvent(event)
 
     def focusOutEvent(self, event):
+        self._announce_selection()
         self.update()
         super().focusOutEvent(event)
 
@@ -228,7 +232,7 @@ class GameBoard(QWidget):
                         painter.setOpacity(self._easing.valueForProgress(
                             min(1.0, self.feedback_elapsed / CAPTURE_MS)))
                     rect = QRectF((x + .5) * gap, (y + .5) * gap, gap, gap)
-                    painter.fillRect(rect, QColor("#D3E5EF" if owner == 1 else "#F5D8C9"))
+                    painter.fillRect(rect, QColor("#CBE3EF" if owner == 1 else "#F7D3C1"))
                     painter.setPen(QColor(BLUE if owner == 1 else CORAL))
                     painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, initials[owner - 1])
                     painter.setOpacity(1.0)
@@ -241,11 +245,11 @@ class GameBoard(QWidget):
         for outcome in self.engine.history:
             progress = (self._easing.valueForProgress(min(1.0, self.feedback_elapsed / LINE_MS))
                         if outcome is self.feedback else 1.0)
-            line(outcome.move, BLUE if outcome.player == 1 else CORAL, progress=progress)
+            line(outcome.move, BOARD_BLUE if outcome.player == 1 else BOARD_CORAL, progress=progress)
 
         preview = self.hovered or (self.selected if self.hasFocus() and self.keyboard_selection else None)
         if self.input_enabled and preview and self.engine.is_legal(preview):
-            line(preview, BLUE if self.engine.current_player == 1 else CORAL,
+            line(preview, BOARD_BLUE if self.engine.current_player == 1 else BOARD_CORAL,
                  line_width, Qt.PenStyle.DashLine)
         if self.hint is not None and self.engine.is_legal(self.hint):
             line(self.hint, "#9B681E", line_width + 2, Qt.PenStyle.DotLine)
@@ -261,9 +265,19 @@ class GameBoard(QWidget):
             latest = self.engine.history[-1]
             sx, sy, ex, ey = geometry.edge_points(latest.move)
             painter.setBrush(Qt.BrushStyle.NoBrush)
-            painter.setPen(QPen(QColor("#9B681E"), 2))
+            painter.setPen(QPen(QColor(BOARD_BLUE if latest.player == 1 else BOARD_CORAL), 2.5))
             for point in (QPointF(sx, sy), QPointF(ex, ey)):
                 painter.drawEllipse(point, radius + 3, radius + 3)
+            painter.setPen(QPen(QColor("#EAA331"), 2.4,
+                                Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
+            anchor = QPointF((sx + ex) / 2, (sy + ey) / 2)
+            if latest.move.edge == "row":
+                anchor += QPointF(0, -13)
+            else:
+                anchor += QPointF(13, 0)
+            painter.drawLine(anchor + QPointF(-6, -3), anchor + QPointF(-9, -8))
+            painter.drawLine(anchor + QPointF(1, -5), anchor + QPointF(1, -11))
+            painter.drawLine(anchor + QPointF(7, -3), anchor + QPointF(11, -7))
 
         if self.hasFocus() and self.keyboard_selection and not self.paused:
             painter.setPen(QPen(QColor(BLUE), 1.5, Qt.PenStyle.DashLine))

@@ -1,65 +1,112 @@
 """Paper Club welcome and match setup screens."""
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import QRectF, QSize, Qt, Signal
+from PySide6.QtGui import QColor, QLinearGradient, QPainter, QPainterPath
 from PySide6.QtWidgets import (
     QButtonGroup, QHBoxLayout, QLineEdit, QSizePolicy, QVBoxLayout, QWidget,
 )
 
 from ui.paper_style import BoardIllustration, PaperSurface, button, label
+from ui.paper_art import PaperLogo, paper_icon
 from utils.setup_preferences import SetupChoices
+
+
+class _WelcomeSheet(PaperSurface):
+    """A tilted sheet under real, upright controls, without an enclosing UI card."""
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        rect = QRectF(self.width() * .045, self.height() * .07,
+                      self.width() * .57, self.height() * .89)
+        painter.translate(rect.center())
+        painter.rotate(-3)
+        painter.translate(-rect.center())
+        painter.setPen(Qt.PenStyle.NoPen)
+        for offset, alpha in ((8, 9), (5, 12), (3, 16)):
+            painter.setBrush(QColor(70, 51, 25, alpha))
+            painter.drawRoundedRect(rect.translated(2, offset), 13, 13)
+        gradient = QLinearGradient(rect.topLeft(), rect.bottomRight())
+        gradient.setColorAt(0, QColor("#FFFCF3"))
+        gradient.setColorAt(1, QColor("#F2E5CF"))
+        painter.setBrush(gradient)
+        painter.setPen(QColor("#DDCDB0"))
+        painter.drawRoundedRect(rect, 12, 12)
+        path = QPainterPath()
+        path.addRoundedRect(rect, 12, 12)
+        painter.setClipPath(path)
+        painter.drawTiledPixmap(rect, self._grain)
 
 
 class WelcomePage(QWidget):
     play_requested = Signal()
+    instructions_requested = Signal()
+    scores_requested = Signal()
+    settings_requested = Signal()
 
     def __init__(self):
         super().__init__()
-        outer = QVBoxLayout(self)
-        outer.setContentsMargins(0, 0, 0, 0)
-        outer.addStretch()
-        self.sheet = PaperSurface()
-        self.sheet.setMaximumWidth(1120)
-        content = QHBoxLayout(self.sheet)
-        content.setContentsMargins(48, 40, 36, 48)
-        content.setSpacing(24)
-        self.copy = QWidget()
-        copy_layout = QVBoxLayout(self.copy)
-        copy_layout.setContentsMargins(0, 0, 0, 0)
-        copy_layout.setSpacing(16)
-        copy_layout.addWidget(label("A LITTLE TABLETOP STRATEGY", "eyebrow"))
-        self.title = label('<span style="color:#265A80">Dots <span style="color:#57704F">&amp;</span></span>'
-                           '<br><span style="color:#CB513C">Boxes</span>', "homeTitle")
-        self.title.setWordWrap(False)
-        self.title.setAccessibleName("Dots and Boxes")
-        copy_layout.addWidget(self.title)
-        copy_layout.addWidget(label("One line can change the game.", "lead"))
-        self.description = label("Complete a box to score—and take another turn.")
-        self.description.setMaximumWidth(330)
-        copy_layout.addWidget(self.description)
-        copy_layout.addSpacing(8)
-        self.play_button = button("Play a round", "primary")
-        self.play_button.setMinimumWidth(230)
+        self.sheet = _WelcomeSheet(self)
+        self.copy = QWidget(self.sheet)
+        self.title = PaperLogo(stacked=True, parent=self.copy)
+        self.tagline = label("One line can change the game.", "homeTagline")
+        self.tagline.setParent(self.copy)
+        self.tagline.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.tagline.setWordWrap(False)
+        self.play_button = button("Play", "primary")
+        self.play_button.setParent(self.copy)
+        self.play_button.setIcon(paper_icon("play", "#FFFFFF", 24))
+        self.play_button.setIconSize(QSize(24, 24))
         self.play_button.setAccessibleDescription("Choose an opponent and set up a match")
         self.play_button.clicked.connect(self.play_requested)
-        copy_layout.addWidget(self.play_button, alignment=Qt.AlignmentFlag.AlignLeft)
-        copy_layout.addWidget(label("Two players · Three AI levels"))
-        content.addWidget(self.copy, 1)
-        self.illustration = BoardIllustration()
-        content.addWidget(self.illustration, 1)
-        outer.addWidget(self.sheet, alignment=Qt.AlignmentFlag.AlignHCenter)
-        outer.addStretch()
-        self._content_layout = content
-        self._compact = None
+        self.instructions_button = button("How to play", "homeLink")
+        self.scores_button = button("High scores", "homeLink")
+        self.settings_button = button("Settings", "homeLink")
+        for control, icon, signal in (
+            (self.instructions_button, "book", self.instructions_requested),
+            (self.scores_button, "trophy", self.scores_requested),
+            (self.settings_button, "settings", self.settings_requested),
+        ):
+            control.setParent(self.copy)
+            control.setIcon(paper_icon(icon, size=25))
+            control.setIconSize(QSize(25, 25))
+            control.clicked.connect(signal)
+        self.scores_button.setEnabled(False)
+        self.scores_button.setToolTip("High scores are not available yet.")
+        self.scores_button.setAccessibleDescription("High scores are not available yet.")
+        self.illustration = BoardIllustration(self.sheet)
+        self.setTabOrder(self.play_button, self.instructions_button)
+        self.setTabOrder(self.instructions_button, self.settings_button)
 
     def resizeEvent(self, event):
-        compact = self.width() < 900 or self.height() < 560
-        self.illustration.setVisible(not compact)
-        self.description.setVisible(self.height() >= 400)
-        self._content_layout.setContentsMargins(32 if compact else 48, 24 if compact else 40,
-                                               32 if compact else 36, 32 if compact else 48)
-        if compact != self._compact:
-            self._compact = compact
-            self.title.setStyleSheet(f"font-size: {52 if compact else 72}px;")
+        # Preserve the reference's two overlapping sheets even in a short window.
+        height = min(self.height(), 860)
+        width = min(self.width(), round(height * 1.68), 1440)
+        height = min(height, round(width / 1.68))
+        self.sheet.setGeometry((self.width() - width) // 2, (self.height() - height) // 2,
+                               width, height)
+        copy_width = round(width * .41)
+        self.copy.setGeometry(round(width * .085), round(height * .105), copy_width, round(height * .86))
+        row_height = max(44, min(58, round(height * .078)))
+        play_height = max(44, min(66, round(height * .095)))
+        tagline_height = max(26, min(40, round(height * .06)))
+        available = self.copy.height() - (row_height * 3 + play_height + tagline_height + 16)
+        logo_height = max(98, available)
+        self.title.setGeometry(0, 0, copy_width, logo_height)
+        self.tagline.setGeometry(0, logo_height, copy_width, tagline_height)
+        self.tagline.setStyleSheet(f"font-size: {max(14, min(23, round(width / 54)))}px;")
+        self.play_button.setStyleSheet(f"font-size: {max(18, min(28, round(width / 48)))}px; font-weight: 600;")
+        control_width = round(copy_width * .84)
+        left = (copy_width - control_width) // 2
+        top = logo_height + tagline_height + 7
+        self.play_button.setGeometry(left, top, control_width, play_height)
+        top += play_height + 9
+        for control in (self.instructions_button, self.scores_button, self.settings_button):
+            control.setGeometry(left, top, control_width, row_height)
+            control.setStyleSheet(f"font-size: {max(17, min(24, round(width / 55)))}px;")
+            top += row_height
+        self.illustration.setGeometry(round(width * .49), round(height * .10),
+                                      round(width * .50), round(height * .83))
         super().resizeEvent(event)
 
 

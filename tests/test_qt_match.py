@@ -155,7 +155,12 @@ class QtMatchTests(unittest.TestCase):
         with patch.object(self.match.engine.ai, "get_ai_move",
                           return_value=("row", (1, 0))) as choose:
             self.actions().pause.click()
-            QTest.qWait(40)
+            # Wait for the scheduled result; rendering the modal pause panel
+            # can consume a fixed 40 ms wait on a busy or high-DPI desktop.
+            for _ in range(100):
+                if len(self.match.engine.history) == 2:
+                    break
+                QTest.qWait(10)
         choose.assert_called_once_with("medium")
         self.assertEqual(len(self.match.engine.history), 2)
         self.assertFalse(self.match.timers)
@@ -258,9 +263,9 @@ class QtMatchTests(unittest.TestCase):
                 bottom_left = self.board.edge_center(Move("row", (0, 4)))
                 self.assertAlmostEqual(top_right.x() - top_left.x(),
                                        bottom_left.y() - top_left.y())
-                home = self.match.compact_home if self.match.stage.compact else self.match.home_button
-                controls = (home, self.actions().hint,
-                            self.actions().undo, self.actions().pause)
+                self.assertFalse(self.match.home_button.isVisible())
+                self.assertFalse(self.match.compact_home.isVisible())
+                controls = (self.actions().hint, self.actions().undo, self.actions().pause)
                 for control in controls:
                     self.assertTrue(control.isVisible())
                     bounds = QRect(control.mapTo(self.window, QPoint()), control.size())
@@ -271,7 +276,7 @@ class QtMatchTests(unittest.TestCase):
                 if self.match.stage.compact:
                     self.assertTrue(self.match.compact_strip.isVisible())
                     self.assertFalse(self.match.sidebar.isVisible())
-                    self.assertTrue(self.match.compact_explanation.isVisible())
+                    self.assertFalse(self.match.compact_explanation.isVisible())
                     for index, player in enumerate(self.match.compact_players):
                         self.assertEqual(player.name.full_text,
                                          self.match.controller.config.player_names[index])

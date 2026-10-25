@@ -17,6 +17,8 @@ remains available with `--classic`.
 - Pause/resume, including safe suspension of computer turns
 - Fullscreen on first launch, with remembered window preferences
 - Short move, capture, button, and screen animations with a saved reduced-motion option
+- Illustrated instructions and an in-game display settings panel
+- Final-board results with same-settings Rematch
 
 ## Requirements
 
@@ -49,7 +51,7 @@ Start the game from the repository root:
 python main.py
 ```
 
-Choose **Play a round**, then select **Computer** or **A friend**, enter names,
+Choose **Play**, then select **Computer** or **A friend**, enter names,
 and choose an AI difficulty when applicable. Click an available edge between
 adjacent dots. Completing a box adds it to your score and gives you another move.
 
@@ -72,21 +74,30 @@ sidebar; compact windows use a score strip above the board.
 - **Enter / Space** draws the selected edge. **Tab** moves to match controls.
 - **Hint** marks a suggested edge without playing it.
 - **Undo** reverses the last non-scoring move in two-player games.
-- **Pause / Escape** suspends a match. Minimizing also pauses; restore and resume
-  when ready. Computer moves cannot run while paused or after leaving a match.
-- **Home / New match** asks before discarding an unfinished match.
-- **View > Reduced motion** switches to immediate visual feedback and remembers
+- **Pause / Escape** suspends a match and opens Resume, Settings, New game, and
+  Home. Minimizing also pauses; restore and resume when ready. Computer moves
+  cannot run while paused or after leaving a match.
+- **Pause > Home / New game** asks before discarding an unfinished match.
+- **Settings > Display > Reduced motion** switches to immediate feedback and remembers
   your choice. Until you choose, Windows animation preferences set the default.
+- **Settings > Display > Fullscreen** changes window mode; **F11** does the same.
+- **How to play** on the welcome screen opens the illustrated Instructions tab.
+
+Settings opened during a match preserves the board and cancels pending computer
+moves. **Done** returns to the pause panel; choose **Resume** to continue.
 
 Captured boxes show player initials (or 1/2 for matching initials), and gold
 rings mark the most recent edge. Completed matches retain the final board and
-scores. Scores update immediately while new lines draw and captured boxes fill.
+scores together with **Rematch**, **New game**, and **Home**. Rematch starts a clean
+board with the same opponent, difficulty, and names. Scores update immediately
+while new lines draw and captured boxes fill.
 Move input, Hint, and Undo wait briefly for that feedback; Pause stays available.
 Computer moves are paced individually, including consecutive captures. Pausing,
 leaving a match, or minimizing settles active effects without replaying moves.
 
-Audio, the settings hub, instructions, high scores, and the full results
-experience are still in progress.
+Audio, the instructions practice exercise, persistent high scores, personal-best
+feedback, and the results celebration are still in progress. The welcome screen's
+High scores entry is disabled until score storage is available.
 See [the implementation roadmap](ROADMAP.md) for completed and upcoming work.
 
 ## Development checks

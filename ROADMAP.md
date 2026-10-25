@@ -62,9 +62,10 @@ covers both new screens. The nine flow/layout checks also pass independently at
 
 ## Next increment
 
-Add the Settings hub with Audio & Display controls, independent music/effect
-volume and mute, original audio, fullscreen, stronger board contrast, and reduced
-motion. Opening settings during play must safely pause and preserve the match.
+Extend the Settings hub with Audio & Display controls, independent music/effect
+volume and mute, original audio, and a stronger-board-contrast option. The visual
+correction below already supplies fullscreen, reduced motion, illustrated rules,
+and safe navigation to Settings during a paused match; retain these behaviors.
 Wait for the next explicit approval before starting this increment.
 
 ## Completed board and match controls — October 21, 2026
@@ -126,3 +127,36 @@ frame-rate guarantee. The earlier approval-service limit has cleared.
 
 This completes only the motion increment. Settings/audio, instructions/high
 scores, final results, and final packaging remain pending.
+
+## Mockup alignment correction — October 25, 2026
+
+At the user's request, refined the welcome, match, and results composition to
+follow the selected Paper Club reference more closely. The welcome now uses
+overlapping ivory sheets, a large blue/sage/coral wordmark, a tilted sample board,
+and Play followed by How to play, High scores, and Settings. Shared controls and
+paper surfaces have consistent spacing, outlines, and readable color contrast.
+
+Removed the persistent toolbar and menu bar. Active matches show only Hint, Undo,
+and Pause alongside aligned, equal-size avatars, named scores, a sage turn banner,
+and a box-count illustration. Home, New game, and Settings belong in a modal pause
+panel with keyboard focus contained inside it. Fullscreen and reduced motion are
+in Settings, and F11 remains available. Opening and closing Settings preserves
+the match and returns to an explicit Resume action before AI can continue.
+
+Added illustrated rules under How to play and Settings > Instructions. Completed
+games keep their final board beside the winner and scores, with same-settings
+Rematch, New game, and Home. High scores remains visibly disabled with an
+explanation; there are no placeholder audio controls or invented personal bests.
+
+This is a visual/navigation correction, not completion of the remaining audio,
+practice/high-score, results-celebration, or packaging milestones. These remain
+unchecked above and still require approval before the next increment.
+
+Verification: all 101 automated checks pass, including real AI games, motion,
+pause/settings cancellation, keyboard focus containment, navigation confirmation,
+long player names, and completed-match rematches. All 31 welcome/setup, match,
+and navigation checks pass at 150% and 200% scaling. Actual Qt renders were
+inspected at 800 by 480, 1180 by 780, and 1920 by 1080, covering the welcome,
+match, results, settings, instructions, and pause screens. Dependency consistency,
+Python compilation, and whitespace checks pass. Executable packaging and testing
+with an actual screen reader remain part of the final verification milestone.
