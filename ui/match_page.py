@@ -278,6 +278,7 @@ class MatchStage(QWidget):
 
 
 class MatchPage(QWidget):
+    sound_requested = Signal(str)
     home_requested = Signal()
     new_match_requested = Signal()
     pause_requested = Signal()
@@ -538,6 +539,9 @@ class MatchPage(QWidget):
         self.board.finish_feedback()
 
     def _on_move(self, outcome):
+        if outcome is not None:
+            self.sound_requested.emit("result" if outcome.finished else
+                                      "capture" if outcome.captured_boxes else "move")
         if outcome is None:
             self.board.finish_feedback()
         if outcome is not None:

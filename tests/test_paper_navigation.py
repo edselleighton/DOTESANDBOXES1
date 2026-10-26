@@ -12,6 +12,7 @@ from PySide6.QtGui import QFontDatabase
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QMenuBar, QMessageBox
 
+from audio_support import quiet_audio
 from core.game_engine import MatchConfig, Move
 from ui.qt_app import PaperClubWindow
 from utils.setup_preferences import SetupStore
@@ -30,7 +31,7 @@ class PaperNavigationTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.store = SetupStore(Path(self.temp.name) / "settings.json")
         self.store.save_reduced_motion(True)
-        self.window = PaperClubWindow(self.store)
+        self.window = PaperClubWindow(self.store, audio=quiet_audio(self.store))
         self.addCleanup(self.window.close)
         self.window.resize(1180, 780)
         self.window.show()
@@ -156,6 +157,9 @@ class PaperNavigationTests(unittest.TestCase):
                 if tab == 0:
                     controls.extend([self.window.settings.fullscreen, self.window.settings.reduced_motion])
                 for control in controls:
+                    if tab == 0 and control in (self.window.settings.fullscreen, self.window.settings.reduced_motion):
+                        self.window.settings.display_scroll.ensureWidgetVisible(control)
+                        self.app.processEvents()
                     bounds = QRect(control.mapTo(self.window, QPoint()), control.size())
                     self.assertTrue(self.window.rect().contains(bounds), (width, height, control.accessibleName()))
                     self.assertGreaterEqual(control.height(), 44)

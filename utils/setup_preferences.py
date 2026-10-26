@@ -45,6 +45,21 @@ class WindowPreferences:
                 raise ValueError("Window dimensions are outside the supported range")
 
 
+@dataclass(frozen=True)
+class AudioPreferences:
+    music_volume: int = 15
+    effects_volume: int = 50
+    music_muted: bool = False
+    effects_muted: bool = False
+
+    def __post_init__(self):
+        for value in (self.music_volume, self.effects_volume):
+            if type(value) is not int or not 0 <= value <= 100:
+                raise ValueError("Audio volume must be between zero and 100")
+        if any(type(value) is not bool for value in (self.music_muted, self.effects_muted)):
+            raise ValueError("Audio mute preferences must be boolean values")
+
+
 class SetupStore:
     def __init__(self, path=None):
         base = Path(os.environ.get("LOCALAPPDATA", Path.home() / ".local" / "share"))
@@ -94,6 +109,29 @@ class SetupStore:
         if type(enabled) is not bool:
             return False
         return self._save_section("display", {"reduced_motion": enabled}, merge=True)
+
+    def load_audio(self):
+        try:
+            data = self._read().get("audio", {})
+            if not isinstance(data, dict):
+                return AudioPreferences()
+            keys = ("music_volume", "effects_volume", "music_muted", "effects_muted")
+            return AudioPreferences(**{key: data[key] for key in keys if key in data})
+        except (TypeError, ValueError):
+            return AudioPreferences()
+
+    def save_audio(self, preferences: AudioPreferences):
+        return self._save_section("audio", asdict(preferences))
+
+    def load_stronger_contrast(self):
+        display = self._read().get("display", {})
+        value = display.get("stronger_contrast") if isinstance(display, dict) else None
+        return value if type(value) is bool else False
+
+    def save_stronger_contrast(self, enabled: bool):
+        if type(enabled) is not bool:
+            return False
+        return self._save_section("display", {"stronger_contrast": enabled}, merge=True)
 
     def _save_section(self, section, values, *, merge=False):
         temporary = None

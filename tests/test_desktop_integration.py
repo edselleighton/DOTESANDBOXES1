@@ -12,6 +12,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QFont, QFontDatabase, QRawFont
 
+from audio_support import quiet_audio
 from core.game_engine import Move
 from test_game_engine import all_moves
 from ui.qt_app import PaperClubWindow
@@ -91,7 +92,7 @@ class QtShellTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         store = SetupStore(Path(self.temp.name) / "settings.json")
         store.save_reduced_motion(True)
-        self.window = PaperClubWindow(store)
+        self.window = PaperClubWindow(store, audio=quiet_audio(store))
 
     def tearDown(self):
         self.window.match.stop()

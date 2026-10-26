@@ -13,6 +13,7 @@ from PySide6.QtGui import QFontDatabase
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QMessageBox
 
+from audio_support import quiet_audio
 from core.game_engine import MatchConfig, Move
 from ui.motion import CAPTURE_MS, LINE_MS, PAGE_MS
 from ui.motion_controls import MotionButton
@@ -33,7 +34,7 @@ class MatchMotionTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.store = SetupStore(Path(self.temp.name) / "settings.json")
         self.store.save_reduced_motion(False)
-        self.window = PaperClubWindow(self.store)
+        self.window = PaperClubWindow(self.store, audio=quiet_audio(self.store))
         self.addCleanup(self.window.close)
         self.window.show()
         self.window.start_match(MatchConfig("PVP", None, ("Sam", "Robin")))
@@ -112,7 +113,7 @@ class MatchMotionTests(unittest.TestCase):
         self.click(Move("row", (1, 0)))
         self.assertFalse(self.board.animating)
         self.assertEqual(len(self.match.engine.history), 2)
-        reopened = PaperClubWindow(self.store)
+        reopened = PaperClubWindow(self.store, audio=quiet_audio(self.store))
         self.addCleanup(reopened.close)
         self.assertTrue(reopened.reduced_motion_action.isChecked())
 
@@ -214,11 +215,11 @@ class MatchMotionTests(unittest.TestCase):
     def test_system_preference_is_default_and_user_override_wins(self):
         other = SetupStore(Path(self.temp.name) / "system-default.json")
         with patch("ui.qt_app.system_reduced_motion", return_value=True):
-            window = PaperClubWindow(other)
+            window = PaperClubWindow(other, audio=quiet_audio(other))
             self.addCleanup(window.close)
             self.assertTrue(window.motion.reduced_motion)
             other.save_reduced_motion(False)
-            override = PaperClubWindow(other)
+            override = PaperClubWindow(other, audio=quiet_audio(other))
             self.addCleanup(override.close)
             self.assertFalse(override.motion.reduced_motion)
 

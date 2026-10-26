@@ -13,6 +13,7 @@ from PySide6.QtTest import QTest
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 
+from audio_support import quiet_audio
 from core.game_engine import MatchConfig
 from ui.qt_app import PaperClubWindow
 from utils.setup_preferences import SetupStore
@@ -31,7 +32,7 @@ class PaperClubFlowTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.store = SetupStore(Path(self.temp.name) / "settings.json")
         self.store.save_reduced_motion(True)
-        self.window = PaperClubWindow(self.store)
+        self.window = PaperClubWindow(self.store, audio=quiet_audio(self.store))
         self.addCleanup(self.window.close)
         self.addCleanup(self.window.match.stop)
         self.window.show()
@@ -80,7 +81,7 @@ class PaperClubFlowTests(unittest.TestCase):
         self.assertIs(self.window.pages.currentWidget(), self.window.match)
         self.assertEqual(self.window.match.controller.config,
                          MatchConfig("PVP", None, ("Sam", "Robin")))
-        reopened = PaperClubWindow(self.store)
+        reopened = PaperClubWindow(self.store, audio=quiet_audio(self.store))
         self.addCleanup(reopened.close)
         self.assertTrue(reopened.setup.pvp_button.isChecked())
         self.assertEqual(reopened.setup.player_two.text(), "Robin")

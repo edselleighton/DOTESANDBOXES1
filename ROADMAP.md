@@ -11,7 +11,7 @@ and AI strategies. Work proceeds in the following dependency order.
 - [x] Build the Paper Club visual foundation, welcome screen, and combined match setup.
 - [x] Add the responsive Qt board, match sidebar, keyboard controls, and pause/resume.
 - [x] Add move/capture transitions, AI pacing, and reduced-motion support.
-- [ ] Add Settings, audio controls, original sound effects, and gentle background music.
+- [x] Add Settings, audio controls, original sound effects, and gentle background music.
 - [ ] Add illustrated instructions, practice, and persistent local high scores.
 - [ ] Finish results, personal-best feedback, same-settings rematches, and celebration.
 - [ ] Complete visual/accessibility checks, end-to-end verification, and Windows packaging.
@@ -62,10 +62,11 @@ covers both new screens. The nine flow/layout checks also pass independently at
 
 ## Next increment
 
-Extend the Settings hub with Audio & Display controls, independent music/effect
-volume and mute, original audio, and a stronger-board-contrast option. The visual
-correction below already supplies fullscreen, reduced motion, illustrated rules,
-and safe navigation to Settings during a paused match; retain these behaviors.
+Add the one-box instructions practice exercise and persistent local high scores.
+Retain the existing illustrated rules, Settings tabs, safe pause routing, display
+controls, audio preferences, and results foundation. Separate ranked and practice
+records, exclude abandoned games and the exercise, and use match IDs to avoid
+duplicates. This is the next bounded milestone, pending explicit approval.
 Wait for the next explicit approval before starting this increment.
 
 ## Completed board and match controls — October 21, 2026
@@ -160,3 +161,42 @@ inspected at 800 by 480, 1180 by 780, and 1920 by 1080, covering the welcome,
 match, results, settings, instructions, and pause screens. Dependency consistency,
 Python compilation, and whitespace checks pass. Executable packaging and testing
 with an actual screen reader remain part of the final verification milestone.
+
+## Completed audio and display settings — October 27, 2026
+
+Extended the Paper Club Settings panel with independent music/effect sliders,
+mute controls, a capture-sound sample, and stronger board contrast. Defaults are
+15% music and 50% effects. Sliders, checkboxes, and display switches retain native
+keyboard operation and accessible names. Short windows scroll the panel contents
+while retaining the Done and Quit controls. Settings still preserves and pauses
+the current match until an explicit Resume action.
+
+Added an original 24-second, eight-bar music loop and short move, capture, menu,
+and result sounds. All five PCM WAV files are synthesized by the checked-in
+Python/NumPy generator, with no sampled recordings. The music loop wraps release
+tails across its boundary; effect tails taper to zero. Accepted moves alone emit
+game sounds, and the last move emits one result sound. Volume changes apply live
+and save atomically after a short debounce or before closing Settings/the game.
+Mute keeps each channel's volume. Missing files or unavailable audio output show
+an explanation in Settings and leave play available. Minimizing stops all audio;
+restoring resumes enabled music and leaves gameplay paused without replaying old
+effects. Native Qt sound objects are reused across moves.
+
+Stronger contrast darkens open edges and increases player-line weight without
+changing board state, ownership initials, hit targets, or the rules. It persists
+in the existing versioned settings file alongside other display preferences.
+
+Verification: all 113 automated checks pass, covering the existing rules/real-AI
+games and animations, audio event routing, independent mute/volume, atomic
+preferences, output/file failures, minimized cleanup, contrast, and compact
+keyboard access. The 19 audio/navigation checks pass at 150% and 200% scaling.
+Qt's real audio backend loaded all five WAVs, started looping music and an effect,
+and stopped all playback on suspension. PCM checks confirm headroom, tapered
+effects, and a music-loop boundary within the ordinary waveform changes.
+Actual Settings and stronger-contrast board renders were visually inspected.
+Python compilation, dependency consistency, and whitespace checks pass.
+
+This completes the audio/display milestone only. Practice/high scores,
+personal-best feedback and celebration, and final executable packaging remain.
+The original evening check-in window ended October 25; further work awaits the
+user's next approval and a revised pacing preference.

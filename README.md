@@ -19,6 +19,8 @@ remains available with `--classic`.
 - Short move, capture, button, and screen animations with a saved reduced-motion option
 - Illustrated instructions and an in-game display settings panel
 - Final-board results with same-settings Rematch
+- Original looping music and soft move, capture, menu, and result sounds
+- Independent music/effects volumes and mute, plus stronger board contrast
 
 ## Requirements
 
@@ -78,13 +80,24 @@ sidebar; compact windows use a score strip above the board.
   Home. Minimizing also pauses; restore and resume when ready. Computer moves
   cannot run while paused or after leaving a match.
 - **Pause > Home / New game** asks before discarding an unfinished match.
-- **Settings > Display > Reduced motion** switches to immediate feedback and remembers
+- **Settings > Audio & Display > Reduced motion** switches to immediate feedback and remembers
   your choice. Until you choose, Windows animation preferences set the default.
-- **Settings > Display > Fullscreen** changes window mode; **F11** does the same.
+- **Settings > Audio & Display > Fullscreen** changes window mode; **F11** does the same.
+- **Settings > Audio & Display > Stronger board contrast** darkens open edges and
+  makes player lines bolder. Ownership initials remain visible in captured boxes.
 - **How to play** on the welcome screen opens the illustrated Instructions tab.
 
 Settings opened during a match preserves the board and cancels pending computer
 moves. **Done** returns to the pause panel; choose **Resume** to continue.
+
+Music starts at **15%** and sound effects at **50%**. Each has its own volume and
+mute control; muting retains the volume for later. **Play sample** plays a capture
+sound using the current effects settings. Slider arrow keys change volume by one
+percent; Page Up/Down changes it by ten. Short windows scroll the settings content
+while Done remains visible. Audio and contrast choices are saved atomically with
+other preferences. An unavailable output device or missing sound file does not
+prevent play. Minimizing stops all audio; restoring resumes enabled music while
+the match stays paused and old effects are discarded.
 
 Captured boxes show player initials (or 1/2 for matching initials), and gold
 rings mark the most recent edge. Completed matches retain the final board and
@@ -95,7 +108,7 @@ Move input, Hint, and Undo wait briefly for that feedback; Pause stays available
 Computer moves are paced individually, including consecutive captures. Pausing,
 leaving a match, or minimizing settles active effects without replaying moves.
 
-Audio, the instructions practice exercise, persistent high scores, personal-best
+The instructions practice exercise, persistent high scores, personal-best
 feedback, and the results celebration are still in progress. The welcome screen's
 High scores entry is disabled until score storage is available.
 See [the implementation roadmap](ROADMAP.md) for completed and upcoming work.
@@ -109,7 +122,9 @@ python -m unittest discover -s tests -v
 The suite covers game rules, AI turn sequencing, invalid clicks, undo, full-match
 completion, Tkinter screen wiring, Qt mouse/keyboard input, pause/navigation,
 responsive layouts, fullscreen persistence, animation interruption, reduced
-motion, and consecutive computer captures. Qt checks run offscreen;
+motion, consecutive computer captures, audio routing, mute/volume persistence,
+and missing sound/device recovery. Qt checks run offscreen with silent test sound
+sinks; the audio milestone also includes a separate native-backend playback check.
 Tkinter checks construct withdrawn windows. Both GUI runtimes must be installed. Preference checks use isolated temporary files.
 
 ## AI strategy
@@ -181,6 +196,7 @@ assets/             Images used by the interface
 core/               UI-independent rules, turn sequencing, hints, and AI
 ui/                 Paper Club screens, Qt board, and retained Tkinter interface
 tests/              Rules, controller, and desktop integration checks
+tools/              Reproducible original audio synthesis
 utils/              Assets, shared constants, and atomic preferences
 DotsAndBoxes.spec   PyInstaller build configuration
 main.py             Application entry point

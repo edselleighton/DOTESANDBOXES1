@@ -1,12 +1,13 @@
 """Paper Club application shell, match navigation and window preferences."""
 
-from PySide6.QtCore import QEvent, QSignalBlocker
+from PySide6.QtCore import QEvent, QSignalBlocker, QTimer
 from PySide6.QtGui import QAction, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QMessageBox, QVBoxLayout,
 )
 
 from ui.match_page import MatchPage
+from ui.audio import AudioManager
 from ui.motion import MotionPolicy, PageStack, system_reduced_motion
 from ui.motion_controls import MotionButton
 from ui.paper_screens import SetupPage, WelcomePage
@@ -16,7 +17,7 @@ from utils.setup_preferences import SetupStore, WindowPreferences
 
 
 class PaperClubWindow(QMainWindow):
-    def __init__(self, setup_store=None):
+    def __init__(self, setup_store=None, *, audio=None):
         super().__init__()
         self.store = setup_store if setup_store is not None else SetupStore()
         self.window_preferences = self.store.load_window()
@@ -53,6 +54,8 @@ class PaperClubWindow(QMainWindow):
         self.settings.exit_requested.connect(self.close)
         self.settings.fullscreen_changed.connect(self.set_fullscreen)
         self.settings.reduced_motion_changed.connect(self.set_reduced_motion)
+        self.settings.stronger_contrast_changed.connect(self.set_stronger_contrast)
+        self.settings.audio_changed.connect(self.set_audio_preferences)
         self.setup.back_requested.connect(self.show_home)
         self.setup.start_requested.connect(self.start_match)
         self.match.home_requested.connect(self.show_home)
@@ -77,8 +80,47 @@ class PaperClubWindow(QMainWindow):
         self.addAction(self.reduced_motion_action)
         self.escape_shortcut = QShortcut(QKeySequence("Escape"), self)
         self.escape_shortcut.activated.connect(self.go_back)
+        self.audio = audio if audio is not None else AudioManager(self.store.load_audio(), self)
+        self.settings.set_audio_preferences(self.audio.preferences)
+        self.audio.status_changed.connect(self.update_audio_status)
+        self.settings.sample_requested.connect(lambda: self.audio.play("capture"))
+        self.match.sound_requested.connect(self.audio.play)
+        self._audio_save_timer = QTimer(self)
+        self._audio_save_timer.setSingleShot(True)
+        self._audio_save_timer.timeout.connect(self.save_audio_preferences)
+        self._audio_warning = ""
+        self.update_audio_status()
+        contrast = self.store.load_stronger_contrast()
+        with QSignalBlocker(self.settings.stronger_contrast):
+            self.settings.stronger_contrast.setChecked(contrast)
+        self.match.board.set_stronger_contrast(contrast)
         for control in self.findChildren(MotionButton):
             control.set_motion_policy(self.motion)
+            if control is not self.settings.sample_button:
+                control.clicked.connect(lambda checked=False: self.audio.play("menu"))
+
+    def set_audio_preferences(self, preferences):
+        self.audio.set_preferences(preferences)
+        # Keep dragging responsive; write the final choice atomically after a
+        # short quiet period, and flush before leaving Settings or closing.
+        self._audio_save_timer.start(250)
+
+    def save_audio_preferences(self):
+        self._audio_save_timer.stop()
+        saved = self.store.save_audio(self.audio.preferences)
+        self._audio_warning = "" if saved else "Sound changed for this session; preferences could not be saved."
+        self.update_audio_status()
+
+    def update_audio_status(self, *_):
+        self.settings.set_audio_status(" ".join(text for text in
+                                               (self._audio_warning, self.audio.message) if text))
+
+    def set_stronger_contrast(self, enabled):
+        self.match.board.set_stronger_contrast(enabled)
+        with QSignalBlocker(self.settings.stronger_contrast):
+            self.settings.stronger_contrast.setChecked(enabled)
+        if not self.store.save_stronger_contrast(enabled):
+            self.statusBar().showMessage("Board contrast changed for this session; preferences could not be saved.", 5000)
 
     def set_reduced_motion(self, enabled):
         self.motion.set_reduced_motion(enabled)
@@ -98,10 +140,13 @@ class PaperClubWindow(QMainWindow):
             self.settings.fullscreen.setChecked(self.isFullScreen())
             self.settings.reduced_motion.setChecked(self.motion.reduced_motion)
         self.settings.tabs.setCurrentIndex(tab)
+        self.settings.set_audio_preferences(self.audio.preferences)
         self.pages.setCurrentWidget(self.settings)
         self.settings.tabs.setFocus()
 
     def close_settings(self):
+        if self._audio_save_timer.isActive():
+            self.save_audio_preferences()
         self.pages.setCurrentWidget(self._settings_return)
         if self._settings_return is self.match and self.match.controller.active:
             self.show_pause_panel()
@@ -212,6 +257,8 @@ class PaperClubWindow(QMainWindow):
             if self.isMinimized():
                 self.match.controller.pause()
             self.motion.set_suspended(self.isMinimized())
+            if hasattr(self, "audio"):
+                self.audio.set_suspended(self.isMinimized())
             enabled = self.isFullScreen()
             with QSignalBlocker(self.fullscreen_action), QSignalBlocker(self.settings.fullscreen):
                 self.fullscreen_action.setChecked(enabled)
@@ -219,6 +266,9 @@ class PaperClubWindow(QMainWindow):
         super().changeEvent(event)
 
     def closeEvent(self, event):
+        if self._audio_save_timer.isActive():
+            self.save_audio_preferences()
+        self.audio.close()
         self.pause_panel.hide()
         self.motion.set_suspended(True)
         self.match.stop()
@@ -230,6 +280,10 @@ class PaperClubWindow(QMainWindow):
             height=max(480, min(16384, size.height())),
         ))
         super().closeEvent(event)
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        self.audio.start()
 
     def resizeEvent(self, event):
         compact = self.width() < 1000 or self.height() < 620

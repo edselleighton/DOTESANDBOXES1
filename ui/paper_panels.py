@@ -1,14 +1,16 @@
 """Paper panels for display preferences, rules, and paused-match navigation."""
 
-from PySide6.QtCore import QPointF, QRectF, QSize, Qt, Signal
+from PySide6.QtCore import QPointF, QRectF, QSize, Qt, Signal, QSignalBlocker
 from PySide6.QtGui import QColor, QPainter, QPen
 from PySide6.QtWidgets import (
-    QAbstractButton, QDialog, QHBoxLayout, QScrollArea, QStackedWidget, QTabBar,
+    QAbstractButton, QCheckBox, QDialog, QFrame, QHBoxLayout, QScrollArea,
+    QSlider, QStackedWidget, QTabBar,
     QVBoxLayout, QWidget,
 )
 
 from ui.paper_style import BLUE, CORAL, INK, SAGE, PaperSurface, button, label
 from ui.paper_art import paper_icon
+from utils.setup_preferences import AudioPreferences
 
 
 class Switch(QAbstractButton):
@@ -69,6 +71,9 @@ class SettingsPage(QWidget):
     exit_requested = Signal()
     fullscreen_changed = Signal(bool)
     reduced_motion_changed = Signal(bool)
+    stronger_contrast_changed = Signal(bool)
+    audio_changed = Signal(object)
+    sample_requested = Signal()
 
     def __init__(self):
         super().__init__()
@@ -84,7 +89,7 @@ class SettingsPage(QWidget):
         self.tabs = QTabBar()
         self.tabs.setExpanding(False)
         self.tabs.setAccessibleName("Settings sections")
-        self.tabs.addTab(paper_icon("settings"), "Display")
+        self.tabs.addTab(paper_icon("settings"), "Audio && Display")
         self.tabs.addTab(paper_icon("book"), "Instructions")
         self.tabs.setStyleSheet("""
             QTabBar::tab { background: #F1E8D8; color: #20394A; border: 1px solid #CBBDA3;
@@ -98,18 +103,36 @@ class SettingsPage(QWidget):
         self.display = QWidget()
         display_layout = QVBoxLayout(self.display)
         display_layout.setContentsMargins(12, 12, 12, 12)
-        display_layout.setSpacing(28)
+        display_layout.setSpacing(10)
+        self.music_slider, self.music_mute, self.music_value = self._volume_row(display_layout, "Music")
+        self.effects_slider, self.effects_mute, self.effects_value = self._volume_row(display_layout, "Sound effects")
+        self.sample_button = button("Play sample")
+        self.sample_button.setIcon(paper_icon("play"))
+        self.sample_button.clicked.connect(self.sample_requested)
+        sample_row = QHBoxLayout()
+        sample_row.addWidget(self.sample_button)
+        sample_row.addStretch()
+        display_layout.addLayout(sample_row)
+        self.audio_status = label("")
+        self.audio_status.hide()
+        display_layout.addWidget(self.audio_status)
+        divider = QFrame()
+        divider.setFrameShape(QFrame.Shape.HLine)
+        divider.setStyleSheet("color: #D7CCB7;")
+        display_layout.addWidget(divider)
         self.fullscreen = Switch("Fullscreen")
         self.reduced_motion = Switch("Reduced motion")
+        self.stronger_contrast = Switch("Stronger board contrast")
         for text, note, switch in (
             ("Fullscreen", "Fill the screen with your tabletop. F11 also switches modes.", self.fullscreen),
             ("Reduced motion", "Show moves immediately with no animated transitions.", self.reduced_motion),
+            ("Stronger board contrast", "Darker open edges and bolder player lines.", self.stronger_contrast),
         ):
             row = QHBoxLayout()
             copy = QVBoxLayout()
             copy.setSpacing(6)
             title = label(text, "fieldLabel")
-            title.setStyleSheet("font-size: 18px; font-weight: 600;")
+            title.setStyleSheet("font-size: 16px; font-weight: 600;")
             copy.addWidget(title)
             copy.addWidget(label(note))
             row.addLayout(copy, 1)
@@ -134,7 +157,12 @@ class SettingsPage(QWidget):
             rules.addLayout(row)
         rules.addWidget(label("Keyboard: arrows choose an edge · H / V changes direction · Enter / Space draws.\n"
                               "Tab reaches controls · Escape pauses · Undo removes the last non-scoring move in two-player games."))
-        self.content.addWidget(self.display)
+        self.display_scroll = QScrollArea()
+        self.display_scroll.setWidgetResizable(True)
+        self.display_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self.display_scroll.setStyleSheet("QScrollArea { background: transparent; } QScrollArea > QWidget > QWidget { background: transparent; }")
+        self.display_scroll.setWidget(self.display)
+        self.content.addWidget(self.display_scroll)
         self.rules_scroll = QScrollArea()
         self.rules_scroll.setWidgetResizable(True)
         self.rules_scroll.setStyleSheet("QScrollArea { border: none; background: transparent; } QScrollArea > QWidget > QWidget { background: transparent; }")
@@ -157,12 +185,78 @@ class SettingsPage(QWidget):
         outer.addStretch()
         self.fullscreen.toggled.connect(self.fullscreen_changed)
         self.reduced_motion.toggled.connect(self.reduced_motion_changed)
+        self.stronger_contrast.toggled.connect(self.stronger_contrast_changed)
+        for control in (self.music_slider, self.effects_slider):
+            control.valueChanged.connect(self._audio_edited)
+        for control in (self.music_mute, self.effects_mute):
+            control.toggled.connect(self._audio_edited)
+        self.set_audio_preferences(AudioPreferences())
+
+    def _volume_row(self, layout, title):
+        row = QHBoxLayout()
+        text = label(title, "fieldLabel")
+        text.setMinimumWidth(110)
+        slider = QSlider(Qt.Orientation.Horizontal)
+        slider.setRange(0, 100)
+        slider.setPageStep(10)
+        slider.setMinimumHeight(44)
+        slider.setAccessibleName(f"{title} volume")
+        slider.setAccessibleDescription("Percent. Arrow keys adjust by one; Page Up and Page Down by ten.")
+        slider.setStyleSheet("""
+            QSlider::groove:horizontal { height: 8px; background: #CFCABF; border-radius: 4px; }
+            QSlider::sub-page:horizontal { background: #617B55; border-radius: 4px; }
+            QSlider::handle:horizontal { background: #FFFCF4; border: 1px solid #A89F8D;
+                width: 22px; height: 22px; margin: -8px 0; border-radius: 11px; }
+            QSlider::handle:horizontal:focus { border: 2px solid #265A80; }
+        """)
+        value = label("", "fieldLabel")
+        value.setFixedWidth(46)
+        value.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        mute = QCheckBox("Mute")
+        mute.setAccessibleName(f"Mute {title.lower()}")
+        mute.setMinimumHeight(44)
+        mute.setStyleSheet("QCheckBox { spacing: 8px; } QCheckBox::indicator { width: 22px; height: 22px; }")
+        row.addWidget(text)
+        row.addWidget(slider, 1)
+        row.addWidget(value)
+        row.addWidget(mute)
+        layout.addLayout(row)
+        return slider, mute, value
+
+    def set_audio_preferences(self, preferences):
+        controls = (self.music_slider, self.effects_slider, self.music_mute, self.effects_mute)
+        blockers = [QSignalBlocker(control) for control in controls]
+        self.music_slider.setValue(preferences.music_volume)
+        self.effects_slider.setValue(preferences.effects_volume)
+        self.music_mute.setChecked(preferences.music_muted)
+        self.effects_mute.setChecked(preferences.effects_muted)
+        del blockers
+        self._update_audio_labels()
+
+    def _update_audio_labels(self):
+        self.music_value.setText(f"{self.music_slider.value()}%")
+        self.effects_value.setText(f"{self.effects_slider.value()}%")
+        enabled = not self.effects_mute.isChecked() and self.effects_slider.value() > 0
+        self.sample_button.setEnabled(enabled)
+        reason = ("Play a capture sound at the current effects volume." if enabled
+                  else "Unmute sound effects and raise their volume to play a sample.")
+        self.sample_button.setToolTip(reason)
+        self.sample_button.setAccessibleDescription(reason)
+
+    def _audio_edited(self, *_):
+        self._update_audio_labels()
+        self.audio_changed.emit(AudioPreferences(self.music_slider.value(), self.effects_slider.value(),
+                                                 self.music_mute.isChecked(), self.effects_mute.isChecked()))
+
+    def set_audio_status(self, message):
+        self.audio_status.setText(message)
+        self.audio_status.setVisible(bool(message))
 
     def _arrange(self, *_):
         self.sheet.setFixedWidth(min(940, max(1, self.width() - 32)))
         self.sheet.layout().setContentsMargins(28, 20, 28, 24)
         self.sheet.layout().setSpacing(12 if self.height() < 620 else 20)
-        height = 480 if self.tabs.currentIndex() == 0 else 640
+        height = 640
         self.sheet.setFixedHeight(min(height, max(1, self.height() - 32)))
 
     def resizeEvent(self, event):

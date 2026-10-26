@@ -13,6 +13,7 @@ from PySide6.QtGui import QFontDatabase
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QMessageBox
 
+from audio_support import quiet_audio
 from core.game_engine import MatchConfig, Move
 from test_game_engine import all_moves
 from ui.qt_app import PaperClubWindow
@@ -32,7 +33,7 @@ class QtMatchTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.store = SetupStore(Path(self.temp.name) / "settings.json")
         self.store.save_reduced_motion(True)  # Immediate-state flow tests; timing is covered separately.
-        self.window = PaperClubWindow(self.store)
+        self.window = PaperClubWindow(self.store, audio=quiet_audio(self.store))
         self.addCleanup(self.window.close)
         self.addCleanup(self.window.match.stop)
         self.window.resize(1180, 780)
@@ -304,7 +305,7 @@ class QtMatchTests(unittest.TestCase):
         self.window.resize(1000, 700)
         self.app.processEvents()
         self.window.close()
-        reopened = PaperClubWindow(self.store)
+        reopened = PaperClubWindow(self.store, audio=quiet_audio(self.store))
         self.addCleanup(reopened.close)
         reopened.show_saved_window()
         self.app.processEvents()
