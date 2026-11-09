@@ -1,8 +1,9 @@
 # Dots and Boxes
 
 A desktop implementation of the classic Dots and Boxes game built with Python.
-The current playable interface uses Tkinter. The Paper Club redesign is being
-introduced with a Qt application shell and a shared, independently testable rules model.
+Paper Club uses PySide6/Qt for a textured paper interface, a responsive board,
+and a shared, independently testable rules model. The original Tkinter interface
+remains available with `--classic`.
 
 ## Features
 
@@ -12,6 +13,16 @@ introduced with a Qt application shell and a shared, independently testable rule
 - Live score display
 - Move hints
 - Undo support in player-versus-player games
+- Mouse edge preview, keyboard play, and a last-move marker
+- Pause/resume, including safe suspension of computer turns
+- Fullscreen on first launch, with remembered window preferences
+- Short move, capture, button, and screen animations with a saved reduced-motion option
+- Illustrated instructions and an in-game display settings panel
+- A one-box practice exercise played on the real board
+- Final-board results with same-settings Rematch
+- Original looping music and soft move, capture, menu, and result sounds
+- Independent music/effects volumes and mute, plus stronger board contrast
+- Local high scores for completed matches, with practice recorded separately
 
 ## Requirements
 
@@ -30,7 +41,7 @@ python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
 
-Install the runtime dependency:
+Install the runtime dependencies:
 
 ```powershell
 pip install -r requirements.txt
@@ -44,18 +55,85 @@ Start the game from the repository root:
 python main.py
 ```
 
-Choose **VS PLAYER** for a local two-player game or **VS AI** and select a difficulty. Click an available line between adjacent dots to make a move. Completing a box adds it to the active player's score.
+Choose **Play**, then select **Computer** or **A friend**, enter names,
+and choose an AI difficulty when applicable. Click an available edge between
+adjacent dots. Completing a box adds it to your score and gives you another move.
 
-## Paper Club preview
+## Paper Club controls
 
 ```powershell
 python main.py --paper-club
 ```
 
-The Qt shell opens maximized and supports **F11** fullscreen; **Escape** returns
-from fullscreen. During the interface migration, **Play** opens the current
-Tkinter game in a separate window. The full Paper Club screens, artwork,
-animations, audio, settings, instructions, and high scores are still in progress.
+`--paper-club` is an alias for the default interface. Setup and window choices
+are remembered atomically in `%LOCALAPPDATA%/DotsAndBoxes/settings.json`.
+Missing or damaged preferences do not prevent play.
+
+The game opens in true fullscreen on first launch. **F11** toggles fullscreen;
+closing the game remembers windowed/fullscreen mode, maximization, and window size.
+**Start match** plays in the same window. Wide windows show an aligned player
+sidebar; compact windows use a score strip above the board.
+
+- **Arrows** select an edge; **H / V** changes its orientation.
+- **Enter / Space** draws the selected edge. **Tab** moves to match controls.
+- **Hint** marks a suggested edge without playing it.
+- **Undo** reverses the last non-scoring move in two-player games.
+- **Pause / Escape** suspends a match and opens Resume, Settings, New game, and
+  Home. Minimizing also pauses; restore and resume when ready. Computer moves
+  cannot run while paused or after leaving a match.
+- **Pause > Home / New game** asks before discarding an unfinished match.
+- **Settings > Audio & Display > Reduced motion** switches to immediate feedback and remembers
+  your choice. Until you choose, Windows animation preferences set the default.
+- **Settings > Audio & Display > Fullscreen** changes window mode; **F11** does the same.
+- **Settings > Audio & Display > Stronger board contrast** darkens open edges and
+  makes player lines bolder. Ownership initials remain visible in captured boxes.
+- **How to play** on the welcome screen opens the illustrated Instructions tab.
+- **High scores** on the welcome screen lists completed matches and your best
+  practice run.
+
+Settings opened during a match preserves the board and cancels pending computer
+moves. **Done** returns to the pause panel; choose **Resume** to continue.
+
+Music starts at **15%** and sound effects at **50%**. Each has its own volume and
+mute control; muting retains the volume for later. **Play sample** plays a capture
+sound using the current effects settings. Slider arrow keys change volume by one
+percent; Page Up/Down changes it by ten. Short windows scroll the settings content
+while Done remains visible. Audio and contrast choices are saved atomically with
+other preferences. An unavailable output device or missing sound file does not
+prevent play. Minimizing stops all audio; restoring resumes enabled music while
+the match stays paused and old effects are discarded.
+
+Captured boxes show player initials (or 1/2 for matching initials), and gold
+rings mark the most recent edge. Completed matches retain the final board and
+scores together with **Rematch**, **New game**, and **Home**. Rematch starts a clean
+board with the same opponent, difficulty, and names. Scores update immediately
+while new lines draw and captured boxes fill.
+Move input, Hint, and Undo wait briefly for that feedback; Pause stays available.
+Computer moves are paced individually, including consecutive captures. Pausing,
+leaving a match, or minimizing settles active effects without replaying moves.
+
+## Practice and high scores
+
+**Settings > Instructions > Practice closing a box** opens a one-box exercise on
+the real board. Three sides of the middle box are already drawn; draw the
+missing fourth side to claim it. Only that edge is applied, so the position
+stays the lesson it was set up to be, and any other edge is counted as an
+attempt with a short explanation. **Show the missing side** marks the edge
+without drawing it, and **Start over** sets the exercise up again as a new run.
+The exercise is unavailable while a match is paused behind Settings; resume or
+leave the match first.
+
+**High scores** keeps the ten best completed matches and the ten best practice
+runs in `%LOCALAPPDATA%/DotsAndBoxes/scores.json`, written atomically and apart
+from your preferences. A match is recorded once all 25 boxes are claimed, under
+the name of whoever claimed the most, together with the opponent, the mode and
+difficulty, and the date. A match you leave early is not recorded, and neither a
+Rematch nor a repeated completion can enter the same match twice. Practice runs
+are ranked by fewest attempts and never appear among completed matches. A
+missing or damaged score file does not prevent play; a record that no longer
+satisfies the rules is skipped rather than discarding the rest.
+
+Personal-best feedback and the results celebration are still in progress.
 See [the implementation roadmap](ROADMAP.md) for completed and upcoming work.
 
 ## Development checks
@@ -65,8 +143,14 @@ python -m unittest discover -s tests -v
 ```
 
 The suite covers game rules, AI turn sequencing, invalid clicks, undo, full-match
-completion, Tkinter screen wiring, and Qt shell behavior. Qt checks run offscreen;
-Tkinter checks construct withdrawn windows. Both GUI runtimes must be installed.
+completion, Tkinter screen wiring, Qt mouse/keyboard input, pause/navigation,
+responsive layouts, fullscreen persistence, animation interruption, reduced
+motion, consecutive computer captures, audio routing, mute/volume persistence,
+missing sound/device recovery, the practice exercise, and score recording,
+including duplicate protection and abandoned matches. Qt checks run offscreen
+with silent test sound sinks; the audio milestone also includes a separate
+native-backend playback check.
+Tkinter checks construct withdrawn windows. Both GUI runtimes must be installed. Preference checks use isolated temporary files.
 
 ## AI strategy
 
@@ -109,7 +193,7 @@ During a game:
 
 - **HINT** highlights a suggested move.
 - **UNDO** reverts the previous non-scoring move in player-versus-player mode.
-- **BACK** returns to mode selection.
+- In the classic interface, **BACK** returns to mode selection.
 
 ## Build the Windows executable
 
@@ -125,16 +209,20 @@ Build with the tracked PyInstaller specification:
 pyinstaller DotsAndBoxes.spec
 ```
 
-The executable is generated at `dist/DotsAndBoxes.exe`. The `build/` and `dist/` directories are intentionally excluded from version control.
+The executable is generated at `dist/DotsAndBoxes.exe`. The `build/` and `dist/`
+directories are intentionally excluded from version control. Final verification
+of the Qt executable and its bundled assets is planned for the packaging milestone;
+the current UI milestone is verified from Python source.
 
 ## Project structure
 
 ```text
-assets/             Images used by the interface
+assets/             Images, fonts, and original sounds used by the interface
 core/               UI-independent rules, turn sequencing, hints, and AI
-ui/                 Tkinter screens, board rendering, and the Qt shell
+ui/                 Paper Club screens, Qt board, and retained Tkinter interface
 tests/              Rules, controller, and desktop integration checks
-utils/              Shared constants
+tools/              Reproducible original audio synthesis
+utils/              Assets, shared constants, atomic preferences, and high scores
 DotsAndBoxes.spec   PyInstaller build configuration
 main.py             Application entry point
 ```
